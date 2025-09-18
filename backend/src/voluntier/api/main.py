@@ -18,6 +18,7 @@ from voluntier.api.routes import (
     notifications_router,
     temporal_router,
 )
+from voluntier.api.memory import router as memory_router
 from voluntier.database import close_db_connections
 from voluntier.middleware.logging import LoggingMiddleware
 from voluntier.middleware.security import SecurityMiddleware
@@ -154,6 +155,12 @@ def add_routes(app: FastAPI) -> None:
         temporal_router,
         prefix=f"{settings.api_prefix}/workflows",
         tags=["Workflows"],
+    )
+    
+    app.include_router(
+        memory_router,
+        prefix=f"{settings.api_prefix}",
+        tags=["Memory"],
     )
     
     # Health check endpoint

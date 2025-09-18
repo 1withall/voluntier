@@ -83,6 +83,33 @@ class LLMSettings(BaseSettings):
     timeout: int = Field(default=30)
 
 
+class MemorySettings(BaseSettings):
+    """Hybrid memory system configuration settings."""
+    
+    model_config = SettingsConfigDict(env_prefix="MEMORY_")
+    
+    # Vector store settings
+    vector_index_path: str = Field(default="./data/vector_index")
+    vector_metadata_path: str = Field(default="./data/vector_metadata.pkl")
+    embedding_model_name: str = Field(default="all-MiniLM-L6-v2")
+    embedding_model_type: str = Field(default="sentence_transformer")  # openai, sentence_transformer
+    embedding_dimension: int = Field(default=384)
+    
+    # FAISS settings
+    similarity_threshold: float = Field(default=0.7)
+    max_vectors_per_entity: int = Field(default=10)
+    index_save_frequency: int = Field(default=10)  # Save every N additions
+    
+    # Neo4j graph settings (inherited from Neo4jSettings but can override)
+    graph_batch_size: int = Field(default=1000)
+    relationship_weight_decay: float = Field(default=0.95)  # For time-based relationship decay
+    
+    # Memory management
+    memory_cleanup_interval_hours: int = Field(default=24)
+    max_memory_age_days: int = Field(default=365)
+    enable_auto_cleanup: bool = Field(default=True)
+
+
 class ObservabilitySettings(BaseSettings):
     """Observability and monitoring configuration settings."""
     
@@ -148,6 +175,7 @@ class Settings(BaseSettings):
     temporal: TemporalSettings = Field(default_factory=TemporalSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
+    memory: MemorySettings = Field(default_factory=MemorySettings)
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
     agent: AgentSettings = Field(default_factory=AgentSettings)
     

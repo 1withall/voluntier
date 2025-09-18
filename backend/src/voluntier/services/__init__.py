@@ -6,6 +6,7 @@ from .graph import GraphService
 from .approval import ApprovalService
 from .llm import LLMService
 from .memory import MemoryService
+from .memory_service import MemoryService as HybridMemoryService
 
 __all__ = [
     "AuthService",
@@ -14,4 +15,5 @@ __all__ = [
     "ApprovalService",
     "LLMService",
     "MemoryService",
+    "HybridMemoryService",
 ]

@@ -54,12 +54,24 @@ A streamlined platform connecting community members, organizations, and local bu
 - **Progression**: Log volunteer hours → validate with organization → update community impact → display achievements → share success stories
 - **Success criteria**: Accurate tracking drives engagement and showcases community value
 
+### Hybrid Memory System
+- **Functionality**: Combines Neo4j graph database and FAISS vector search for intelligent community relationship management
+- **Purpose**: Enables real-time contextual awareness, smart matching, and dynamic adaptation to evolving community interactions
+- **Trigger**: Entity creation, relationship formation, and periodic optimization workflows
+- **Progression**: Data ingestion → graph relationship mapping → vector embedding generation → contextual retrieval → insight generation
+- **Success criteria**: Sub-100ms query performance with 90%+ recommendation accuracy and complete relationship tracking
+
 ### Verification & Trust System
 - **Functionality**: Multi-tier verification system ensuring community safety and accountability
 - **Purpose**: Builds trust between volunteers, organizations, and community members
 - **Trigger**: New user registration or requesting higher verification tier
 - **Progression**: Basic signup → identity verification → skill validation → community references → verified status
 - **Success criteria**: High verification rates correlate with increased community participation and safety
+- **Functionality**: AI-driven threat detection, automated incident response, and comprehensive audit logging
+- **Purpose**: Maintains platform security and user trust through proactive threat management
+- **Trigger**: Security events, anomalous behavior, and scheduled security scans
+- **Progression**: Threat detection → severity assessment → automated response → human escalation (if needed) → learning update
+- **Success criteria**: Zero successful security breaches with minimal false positives
 
 ### Advanced Security & Monitoring
 - **Functionality**: AI-driven threat detection, automated incident response, and comprehensive audit logging
@@ -77,6 +89,12 @@ A streamlined platform connecting community members, organizations, and local bu
 - **Redis** for caching, session management, and real-time features
 - **Neo4j** for knowledge graph and relationship modeling
 - **vLLM** for autonomous AI decision-making and natural language processing
+
+### Hybrid Memory Architecture
+- **Neo4j Graph Database**: Stores entity relationships, community networks, and collaboration patterns with real-time graph traversal
+- **FAISS Vector Search**: Enables semantic similarity search for intelligent volunteer-opportunity matching and content recommendations  
+- **Dynamic Memory Management**: Real-time updates and retrievals supporting evolving community interactions and contextual awareness
+- **Scalable Design**: Distributed architecture supporting growing data volumes with sub-100ms query performance
 
 ### Autonomous Agent System
 - **Context-aware decision making** using LLM analysis with deterministic fallbacks
@@ -147,7 +165,7 @@ Subtle, purpose-driven animations that guide users through volunteer coordinatio
 ✅ **Multi-database setup** with PostgreSQL, Redis, and Neo4j integration
 ✅ **Docker Compose deployment** with full observability stack
 ✅ **Comprehensive data models** with proper relationships and constraints
-✅ **Memory and learning system** using Neo4j + FAISS for contextual AI decisions
+✅ **Hybrid memory system** using Neo4j graph database and FAISS vector search for real-time contextual awareness and intelligent matching
 ✅ **Security-first architecture** with threat detection and automated response
 ✅ **CLI management interface** for operations and monitoring
 ✅ **Production configuration** with environment-based settings and secrets management

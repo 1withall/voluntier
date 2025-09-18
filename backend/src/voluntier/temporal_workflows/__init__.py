@@ -9,6 +9,12 @@ from .workflows import (
     AgentOrchestrationWorkflow,
 )
 
+from .memory_workflows import (
+    MemoryMaintenanceWorkflow,
+    EntitySyncWorkflow,
+    SmartRecommendationWorkflow,
+)
+
 from .activities import (
     volunteer_activities,
     event_activities,
@@ -26,6 +32,9 @@ __all__ = [
     "SecurityMonitoringWorkflow",
     "DataSyncWorkflow",
     "AgentOrchestrationWorkflow",
+    "MemoryMaintenanceWorkflow",
+    "EntitySyncWorkflow",
+    "SmartRecommendationWorkflow",
     # Activities
     "volunteer_activities",
     "event_activities",
