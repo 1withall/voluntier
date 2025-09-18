@@ -1,0 +1,1 @@
+from voluntier.utils.stubs import SecurityMiddleware
