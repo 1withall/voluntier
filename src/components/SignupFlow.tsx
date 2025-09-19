@@ -1,16 +1,18 @@
 import { useState } from 'react'
-import { UserType } from '../types/auth'
-import { IndividualSignupForm } from './signup/IndividualSignupForm'
-import { OrganizationSignupForm } from './signup/OrganizationSignupForm'
-import { BusinessSignupForm } from './signup/BusinessSignupForm'
+import { UserProfile } from '../types/profiles'
+import { IndividualOnboarding } from './onboarding/IndividualOnboarding'
+import { OrganizationOnboarding } from './onboarding/OrganizationOnboarding'
+import { BusinessOnboarding } from './onboarding/BusinessOnboarding'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { User, Building, Briefcase, Shield, CheckCircle } from '@phosphor-icons/react'
 
 interface SignupFlowProps {
-  onSignupComplete: (userData: any) => void
+  onSignupComplete: (userData: UserProfile) => void
 }
+
+type UserType = 'individual' | 'organization' | 'business'
 
 export function SignupFlow({ onSignupComplete }: SignupFlowProps) {
   const [selectedUserType, setSelectedUserType] = useState<UserType | null>(null)
@@ -84,7 +86,7 @@ export function SignupFlow({ onSignupComplete }: SignupFlowProps) {
       ...userData,
       userType: selectedUserType,
       verificationStatus: 'pending'
-    })
+    } as UserProfile)
   }
 
   const renderUserTypeSelection = () => (
@@ -180,11 +182,11 @@ export function SignupFlow({ onSignupComplete }: SignupFlowProps) {
 
     switch (selectedUserType) {
       case 'individual':
-        return <IndividualSignupForm {...commonProps} />
+        return <IndividualOnboarding {...commonProps} />
       case 'organization':
-        return <OrganizationSignupForm {...commonProps} />
+        return <OrganizationOnboarding {...commonProps} />
       case 'business':
-        return <BusinessSignupForm {...commonProps} />
+        return <BusinessOnboarding {...commonProps} />
       default:
         return null
     }

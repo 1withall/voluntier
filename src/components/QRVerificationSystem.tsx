@@ -8,7 +8,7 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { QrCode, Scan, CheckCircle, Warning, Shield, User } from '@phosphor-icons/react'
 import { VerificationQRCode } from '../types/auth'
-import { UserProfile } from '../App'
+import { UserProfile } from '../types/profiles'
 
 interface QRVerificationSystemProps {
   userProfile: UserProfile

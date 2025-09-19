@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { UserProfile } from '../App'
+import { UserProfile } from '../types/profiles'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'

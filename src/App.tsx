@@ -4,17 +4,18 @@ import { useTelemetry } from './services/telemetry'
 import { initializeSampleData } from './data/sampleData'
 import { Header } from './components/Header'
 import { EventCard } from './components/EventCard'
-import { ProfileSetup } from './components/ProfileSetup'
 import { OrganizationDashboard } from './components/OrganizationDashboard'
 import { ImpactTracker } from './components/ImpactTracker'
 import { SecurityDashboard } from './components/SecurityDashboard'
 import { SignupFlow } from './components/SignupFlow'
 import { QRVerificationSystem } from './components/QRVerificationSystem'
 import { TelemetryDashboard } from './components/TelemetryDashboard'
+import { UnifiedProfileView } from './components/profiles/UnifiedProfileView'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
 import { Badge } from './components/ui/badge'
 import { HandHeart, Users, Calendar, MapPin } from '@phosphor-icons/react'
+import { UserProfile } from './types/profiles'
 
 export interface VolunteerEvent {
   id: string
@@ -29,26 +30,6 @@ export interface VolunteerEvent {
   skills: string[]
   category: string
   verified: boolean
-}
-
-export interface UserProfile {
-  id: string
-  name: string
-  email: string
-  userType: 'individual' | 'organization' | 'business'
-  skills?: string[]
-  interests?: string[]
-  verified: boolean
-  verificationStatus: 'pending' | 'in_progress' | 'verified' | 'rejected' | 'suspended'
-  hoursLogged: number
-  eventsAttended: number
-  isOrganization: boolean
-  securityScore: number
-  flagged: boolean
-  createdAt: string
-  profile?: any
-  verification?: any
-  permissions?: any
 }
 
 function App() {
@@ -162,70 +143,14 @@ function App() {
 
       case 'profile':
         return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users size={20} />
-                    Profile Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="font-medium">{userProfile.name}</p>
-                    <p className="text-sm text-muted-foreground">{userProfile.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium mb-2">Skills</p>
-                    <div className="flex flex-wrap gap-1">
-                      {(userProfile.skills || []).map(skill => (
-                        <Badge key={skill} variant="secondary">{skill}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium mb-2">Interests</p>
-                    <div className="flex flex-wrap gap-1">
-                      {(userProfile.interests || []).map(interest => (
-                        <Badge key={interest} variant="outline">{interest}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <HandHeart size={20} />
-                    Volunteer Stats
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Hours Logged:</span>
-                    <span className="font-medium">{userProfile.hoursLogged}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Events Attended:</span>
-                    <span className="font-medium">{userProfile.eventsAttended}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Verification Status:</span>
-                    <Badge variant={userProfile.verified ? "default" : "secondary"}>
-                      {userProfile.verified ? "Verified" : "Pending"}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <UnifiedProfileView 
+            userProfile={userProfile}
+            onUpdateProfile={setUserProfile}
+          />
         )
 
       case 'organization':
-        return userProfile.isOrganization ? (
+        return userProfile.userType === 'organization' ? (
           <OrganizationDashboard
             events={events || []}
             onAddEvent={(newEvent) => setEvents(current => [...(current || []), newEvent])}

@@ -23,7 +23,7 @@ import {
   Database
 } from '@phosphor-icons/react'
 import { SecurityEvent } from '../types/auth'
-import { UserProfile } from '../App'
+import { UserProfile } from '../types/profiles'
 
 interface SecurityDashboardProps {
   userProfile?: UserProfile | null

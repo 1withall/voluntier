@@ -1,4 +1,4 @@
-import { UserProfile } from '../App'
+import { UserProfile } from '../types/profiles'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { HandHeart, Users, Calendar, ChartBar, Shield, QrCode, Activity } from '@phosphor-icons/react'
@@ -10,6 +10,29 @@ interface HeaderProps {
 }
 
 export function Header({ userProfile, currentView, onViewChange }: HeaderProps) {
+  const getUserName = (profile: UserProfile | null): string => {
+    if (!profile) return ''
+    switch (profile.userType) {
+      case 'individual':
+        return `${profile.personalInfo?.firstName || ''} ${profile.personalInfo?.lastName || ''}`.trim()
+      case 'organization':
+        return profile.organizationInfo?.legalName || ''
+      case 'business':
+        return profile.businessInfo?.legalName || ''
+      default:
+        return ''
+    }
+  }
+
+  const getVolunteerHours = (profile: UserProfile | null): number => {
+    if (!profile || profile.userType !== 'individual') return 0
+    return profile.volunteerHistory?.hoursLogged || 0
+  }
+
+  const isVerified = (profile: UserProfile | null): boolean => {
+    if (!profile) return false
+    return profile.verificationStatus === 'verified'
+  }
   const navItems = [
     { id: 'events' as const, label: 'Events', icon: Calendar },
     { id: 'profile' as const, label: 'Profile', icon: Users },
@@ -50,12 +73,12 @@ export function Header({ userProfile, currentView, onViewChange }: HeaderProps) 
 
           {userProfile && (
             <div className="flex items-center space-x-3">
-              <Badge variant={userProfile.verified ? "default" : "secondary"}>
-                {userProfile.verified ? "Verified" : "Pending"}
+              <Badge variant={isVerified(userProfile) ? "default" : "secondary"}>
+                {isVerified(userProfile) ? "Verified" : "Pending"}
               </Badge>
               <div className="text-right">
-                <p className="text-sm font-medium">{userProfile.name}</p>
-                <p className="text-xs text-muted-foreground">{userProfile.hoursLogged}h logged</p>
+                <p className="text-sm font-medium">{getUserName(userProfile)}</p>
+                <p className="text-xs text-muted-foreground">{getVolunteerHours(userProfile)}h logged</p>
               </div>
             </div>
           )}
