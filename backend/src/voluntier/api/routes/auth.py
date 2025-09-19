@@ -2,10 +2,14 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from voluntier.dependencies import get_current_user, require_admin
+from voluntier.dependencies import (
+    get_current_user, require_admin, create_token_pair, verify_refresh_token
+)
 from voluntier.database import get_db_session
 from voluntier.models import User
+from voluntier.services.validation_service import UserProfileUpdate
 
 # Auth routes
 auth_router = APIRouter()
@@ -21,6 +25,43 @@ async def register():
     """Register endpoint - requires implementation."""
     # This should be implemented with proper registration logic
     return {"message": "Register endpoint - to be implemented"}
+
+@auth_router.post("/refresh")
+async def refresh_token(
+    refresh_token: str,
+    session: AsyncSession = Depends(get_db_session)
+):
+    """Refresh access token using refresh token."""
+    try:
+        user_id = verify_refresh_token(refresh_token)
+
+        # Verify user still exists and is active
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive"
+            )
+
+        # Create new token pair
+        access_token, new_refresh_token = create_token_pair(str(user.id))
+
+        return {
+            "access_token": access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer",
+            "expires_in": 1800  # 30 minutes
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
 
 
 # Users routes
@@ -52,14 +93,21 @@ async def get_profile(
         "is_active": current_user.is_active
     }
 
-@users_router.get("/list", response_model=list)
-async def list_users(
-    current_user: User = Depends(require_admin),
+@users_router.put("/profile", response_model=dict)
+async def update_profile(
+    profile_data: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session)
 ):
-    """List all users - admin only."""
-    # This should be implemented with proper user listing logic
-    return {"message": "List users endpoint - to be implemented"}
+    """Update current user profile with validation."""
+    # Update user profile
+    for field, value in profile_data.dict(exclude_unset=True).items():
+        setattr(current_user, field, value)
+
+    session.add(current_user)
+    await session.commit()
+
+    return {"message": "Profile updated successfully", "user_id": str(current_user.id)}
 
 
 # Events routes

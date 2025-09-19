@@ -511,8 +511,9 @@ class AdvancedSecurityMiddleware(BaseHTTPMiddleware):
                 self.suspicious_ips.add(client_ip)
                 return self.generate_honeypot_response(request)
             
-            # 3. Rate limiting
-            if not await self.check_rate_limit(request, client_ip):
+            # 3. Rate limiting (IP and user-based)
+            user_context = await self.get_user_context(request)
+            if not await self.check_rate_limit(request, client_ip, user_context):
                 return JSONResponse(
                     status_code=429,
                     content={"error": "Rate limit exceeded"}
@@ -561,39 +562,82 @@ class AdvancedSecurityMiddleware(BaseHTTPMiddleware):
                 content={"error": "Internal security error"}
             )
     
-    async def check_rate_limit(self, request: Request, client_ip: str) -> bool:
-        """Advanced rate limiting with adaptive thresholds"""
+    async def check_rate_limit(self, request: Request, client_ip: str, user_context: Dict = None) -> bool:
+        """Advanced rate limiting with adaptive thresholds and user-based limits"""
         current_minute = int(time.time() // 60)
-        
-        # Determine rate limit based on IP reputation
+        user_id = user_context.get("user_id") if user_context else None
+
+        # Determine rate limit based on IP reputation and user context
         if client_ip in self.suspicious_ips:
-            limit = AGGRESSIVE_RATE_LIMIT
+            ip_limit = AGGRESSIVE_RATE_LIMIT
         else:
-            limit = DEFAULT_RATE_LIMIT
-            
-        # Check current rate
-        key = f"rate_limit:{client_ip}:{current_minute}"
-        current_count = await self.redis_client.get(key) or 0
-        current_count = int(current_count)
-        
-        if current_count >= limit:
-            await self.handle_rate_limit_exceeded(client_ip, current_count)
+            ip_limit = DEFAULT_RATE_LIMIT
+
+        # User-based rate limiting
+        user_limit = DEFAULT_RATE_LIMIT
+        if user_context and user_context.get("authenticated"):
+            user_role = user_context.get("user_role", "volunteer")
+            # Different limits based on user role
+            role_limits = {
+                "volunteer": 100,      # Basic users
+                "organization": 200,   # Organizations
+                "moderator": 500,      # Moderators
+                "admin": 1000          # Admins
+            }
+            user_limit = role_limits.get(user_role, 100)
+
+            # Adjust based on user risk score
+            risk_score = user_context.get("risk_score", 0.0)
+            if risk_score > 0.7:
+                user_limit = max(10, user_limit // 10)  # Severe reduction for high-risk users
+            elif risk_score > 0.3:
+                user_limit = max(50, user_limit // 2)   # Moderate reduction
+
+        # Check IP-based rate limit
+        ip_key = f"rate_limit:ip:{client_ip}:{current_minute}"
+        ip_count = await self.redis_client.get(ip_key) or 0
+        ip_count = int(ip_count)
+
+        if ip_count >= ip_limit:
+            await self.handle_rate_limit_exceeded(client_ip, ip_count, "ip")
             return False
-            
-        # Increment counter
-        await self.redis_client.incr(key)
-        await self.redis_client.expire(key, 60)
-        
+
+        # Check user-based rate limit if user is authenticated
+        if user_id:
+            user_key = f"rate_limit:user:{user_id}:{current_minute}"
+            user_count = await self.redis_client.get(user_key) or 0
+            user_count = int(user_count)
+
+            if user_count >= user_limit:
+                await self.handle_rate_limit_exceeded(user_id, user_count, "user")
+                return False
+
+            # Increment user counter
+            await self.redis_client.incr(user_key)
+            await self.redis_client.expire(user_key, 60)
+
+        # Increment IP counter
+        await self.redis_client.incr(ip_key)
+        await self.redis_client.expire(ip_key, 60)
+
         return True
         
-    async def handle_rate_limit_exceeded(self, client_ip: str, count: int):
-        """Handle rate limit violations"""
-        self.suspicious_ips.add(client_ip)
-        
-        # If severely exceeding limits, block IP
-        if count > DEFAULT_RATE_LIMIT * 2:
-            self.blocked_ips.add(client_ip)
-            await self.blue_team.execute_defense_strategy("ddos", {"client_ip": client_ip})
+    async def handle_rate_limit_exceeded(self, identifier: str, count: int, limit_type: str = "ip"):
+        """Handle rate limit violations for both IP and user-based limits"""
+        if limit_type == "ip":
+            self.suspicious_ips.add(identifier)
+
+            # If severely exceeding limits, block IP
+            if count > DEFAULT_RATE_LIMIT * 2:
+                self.blocked_ips.add(identifier)
+                await self.blue_team.execute_defense_strategy("ddos", {"client_ip": identifier})
+        elif limit_type == "user":
+            # For user-based rate limiting, we might want to log or take different actions
+            # Could implement progressive penalties or temporary restrictions
+            logger.warning(f"User {identifier} exceeded rate limit with {count} requests")
+
+            # Optionally add to suspicious users list or implement user-specific penalties
+            # This could trigger additional authentication requirements or temporary blocks
             
     async def handle_anomalous_request(self, request: Request, score: float):
         """Handle anomalous requests detected by ML"""

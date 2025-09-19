@@ -27,6 +27,7 @@ from voluntier.middleware.metrics import MetricsMiddleware
 from voluntier.services.security_service import security_service
 from voluntier.services.threat_detection import threat_detection_system
 from voluntier.services.honeypot_system import honeypot_manager
+from voluntier.services.audit_service import audit_service
 from voluntier.utils.logging import setup_logging
 from voluntier.utils.exceptions import setup_exception_handlers
 
@@ -46,6 +47,7 @@ async def lifespan(app: FastAPI):
         await security_service.initialize()
         await threat_detection_system.initialize()
         await honeypot_manager.initialize()
+        await audit_service.initialize()
         
         logger.info("Security services initialized successfully")
         logger.info("Application startup completed")
@@ -61,6 +63,7 @@ async def lifespan(app: FastAPI):
     try:
         # Shutdown security services
         await security_service.shutdown()
+        await audit_service.shutdown()
         
         # Close database connections
         await close_db_connections()
