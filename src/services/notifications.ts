@@ -415,7 +415,7 @@ export function useNotifications(userId?: string) {
       unsubscribe()
       service.disconnect()
     }
-  }, [userId, service, setNotifications, setUnreadCount])
+  }, [userId, service]) // Removed setNotifications and setUnreadCount from dependencies
 
   const markAsRead = useCallback(async (notificationId: string) => {
     await service.markAsRead(notificationId)
@@ -423,14 +423,15 @@ export function useNotifications(userId?: string) {
       (current || []).map(n => n.id === notificationId ? { ...n, read: true } : n)
     )
     setUnreadCount(current => Math.max(0, (current || 0) - 1))
-  }, [service, setNotifications, setUnreadCount])
+  }, [service])
 
   const markAllAsRead = useCallback(async () => {
-    const unreadNotifications = (notifications || []).filter(n => !n.read)
+    if (!notifications) return
+    const unreadNotifications = notifications.filter(n => !n.read)
     await Promise.all(unreadNotifications.map(n => service.markAsRead(n.id)))
     setNotifications(current => (current || []).map(n => ({ ...n, read: true })))
     setUnreadCount(0)
-  }, [notifications, service, setNotifications, setUnreadCount])
+  }, [notifications, service])
 
   return {
     notifications,

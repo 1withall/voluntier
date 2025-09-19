@@ -73,9 +73,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true)
   const [adminUsers, setAdminUsers] = useKV<AdminUser[]>('admin-users', [])
   const [sessionData, setSessionData] = useKV<Record<string, ActiveSession>>('active-sessions', {})
+  const [adminInitialized, setAdminInitialized] = useState(false)
+  const [sessionChecked, setSessionChecked] = useState(false)
 
   // Initialize system admin account
   useEffect(() => {
+    if (adminInitialized) return
+    
     const initializeSystemAdmin = async () => {
       try {
         if (!adminUsers || adminUsers.length === 0) {
@@ -104,6 +108,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
           setAdminUsers([systemAdmin])
         }
+        setAdminInitialized(true)
       } catch (error) {
         console.error('Failed to initialize system admin:', error)
       } finally {
@@ -111,12 +116,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     }
 
-    initializeSystemAdmin()
-  }, [adminUsers, setAdminUsers])
+    // Add a small delay to prevent initialization conflicts
+    const timer = setTimeout(initializeSystemAdmin, 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Check for existing session on load
   useEffect(() => {
+    if (sessionChecked || !adminInitialized) return
+    
     const checkExistingSession = async () => {
+      if (!adminUsers || adminUsers.length === 0 || !sessionData) return
+      
       try {
         const sessionToken = localStorage.getItem('voluntier_session_token')
         if (sessionToken && sessionData[sessionToken]) {
@@ -124,23 +135,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
           // Check if session is expired
           if (new Date(session.expiresAt) > new Date()) {
-            const user = adminUsers?.find(u => 
+            const user = adminUsers.find(u => 
               u.sessionTokens.some(t => t.token === sessionToken)
             )
             
-            if (user) {
+            if (user && !currentUser) {
               setCurrentUser(user)
               setCurrentSession(session)
               
-              // Update last activity
-              const updatedSession = {
-                ...session,
-                lastActivity: new Date().toISOString()
+              // Update last activity only if needed
+              const timeSinceLastActivity = new Date().getTime() - new Date(session.lastActivity).getTime()
+              if (timeSinceLastActivity > 60000) { // Only update if more than 1 minute
+                const updatedSession = {
+                  ...session,
+                  lastActivity: new Date().toISOString()
+                }
+                setSessionData(current => ({
+                  ...current,
+                  [sessionToken]: updatedSession
+                }))
               }
-              setSessionData(current => ({
-                ...current,
-                [sessionToken]: updatedSession
-              }))
             }
           } else {
             // Clean up expired session
@@ -154,13 +168,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       } catch (error) {
         console.error('Failed to check existing session:', error)
+      } finally {
+        setSessionChecked(true)
       }
     }
 
-    if (!isLoading && adminUsers) {
+    if (!isLoading && adminInitialized) {
       checkExistingSession()
     }
-  }, [isLoading, adminUsers, sessionData, setSessionData])
+  }, [isLoading, adminInitialized, sessionChecked, adminUsers?.length, sessionData && Object.keys(sessionData).length, currentUser?.id])
 
   const signIn = async (email: string, password: string): Promise<AuthenticationResult> => {
     try {

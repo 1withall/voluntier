@@ -1,6 +1,6 @@
 // Comprehensive telemetry and logging system for security and operational monitoring
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useKV } from '@github/spark/hooks'
 
 export interface TelemetryEvent {
@@ -353,13 +353,43 @@ export function useTelemetry() {
     return () => clearInterval(interval)
   }, [])
 
+  // Use useCallback to prevent function reference changes on each render
+  const trackEvent = useCallback((eventData: Partial<TelemetryEvent>) => {
+    telemetry.trackEvent(eventData)
+  }, [])
+
+  const trackSecurityEvent = useCallback((eventData: {
+    action: string
+    description: string
+    metadata?: Record<string, any>
+    severity?: 'info' | 'warning' | 'error' | 'critical'
+  }) => {
+    telemetry.trackSecurityEvent(eventData)
+  }, [])
+
+  const trackUserAction = useCallback((action: string, category: string, label?: string, value?: number, metadata?: Record<string, any>) => {
+    telemetry.trackUserAction(action, category, label, value, metadata)
+  }, [])
+
+  const trackPageView = useCallback((page: string, additionalData?: Record<string, any>) => {
+    telemetry.trackPageView(page, additionalData)
+  }, [])
+
+  const trackFormSubmission = useCallback((formName: string, success: boolean, errors?: string[]) => {
+    telemetry.trackFormSubmission(formName, success, errors)
+  }, [])
+
+  const setUserId = useCallback((userId: string) => {
+    telemetry.setUserId(userId)
+  }, [])
+
   return {
     analytics,
-    trackEvent: telemetry.trackEvent.bind(telemetry),
-    trackSecurityEvent: telemetry.trackSecurityEvent.bind(telemetry),
-    trackUserAction: telemetry.trackUserAction.bind(telemetry),
-    trackPageView: telemetry.trackPageView.bind(telemetry),
-    trackFormSubmission: telemetry.trackFormSubmission.bind(telemetry),
-    setUserId: telemetry.setUserId.bind(telemetry)
+    trackEvent,
+    trackSecurityEvent,
+    trackUserAction,
+    trackPageView,
+    trackFormSubmission,
+    setUserId
   }
 }

@@ -52,18 +52,18 @@ function AppContent() {
   
   const { trackUserAction, trackPageView, setUserId } = useTelemetry()
 
-  // Initialize sample data on first load
+  // Initialize sample data on first load (only once)
   useEffect(() => {
     initializeSampleData()
   }, [])
 
-  // Track user identification and page views
+  // Track user identification and page views  
   useEffect(() => {
     if (userProfile) {
       setUserId(userProfile.id)
       trackUserAction('user_profile_loaded', 'authentication', userProfile.userType)
     }
-  }, [userProfile, setUserId, trackUserAction])
+  }, [userProfile?.id, userProfile?.userType, setUserId, trackUserAction])
 
   useEffect(() => {
     trackPageView(currentView)
@@ -72,36 +72,39 @@ function AppContent() {
   const handleRegisterForEvent = (eventId: string) => {
     trackUserAction('event_registration', 'events', `event_${eventId}`)
     
-    setRegistrations(current => ({
-      ...(current || {}),
-      [eventId]: true
-    }))
+    setRegistrations(current => {
+      const updated = { ...(current || {}), [eventId]: true }
+      return updated
+    })
     
-    setEvents(currentEvents => 
-      (currentEvents || []).map(event => 
+    setEvents(currentEvents => {
+      if (!currentEvents) return currentEvents
+      return currentEvents.map(event => 
         event.id === eventId 
           ? { ...event, volunteersRegistered: event.volunteersRegistered + 1 }
           : event
       )
-    )
+    })
   }
 
   const handleUnregisterFromEvent = (eventId: string) => {
     trackUserAction('event_unregistration', 'events', `event_${eventId}`)
     
     setRegistrations(current => {
-      const updated = { ...(current || {}) }
+      if (!current) return current
+      const updated = { ...current }
       delete updated[eventId]
       return updated
     })
     
-    setEvents(currentEvents => 
-      (currentEvents || []).map(event => 
+    setEvents(currentEvents => {
+      if (!currentEvents) return currentEvents
+      return currentEvents.map(event => 
         event.id === eventId 
           ? { ...event, volunteersRegistered: Math.max(0, event.volunteersRegistered - 1) }
           : event
       )
-    )
+    })
   }
 
   const renderContent = () => {
