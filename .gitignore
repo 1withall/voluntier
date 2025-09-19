@@ -1,34 +1,126 @@
-# Logs
-logs
-*.log
+# Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*-dist
-*.local
+# Build outputs
+dist/
+dist-ssr/
+build/
+*-dist/
+coverage/
+*.tsbuildinfo
 
-# Editor directories and files
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# IDE and editor files
 .vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 !.vscode/extensions.json
-.idea
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# OS generated files
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-.env
-**/agent-eval-report*
-packages
-pids
-.file-manifest
-.devcontainer/
+# Logs
+logs/
+*.log
 
+# Runtime files
+*.local
+.cache/
+.temp/
+.tmp/
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output
+
+# Temporary folders
+tmp/
+temp/
+
+# Backend specific
+backend/.env
+backend/.env.*
+backend/logs/
+backend/.venv/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/*.so
+backend/.coverage
+backend/htmlcov/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.tox/
+backend/venv/
+backend/ENV/
+backend/env/
+backend/VENV/
+backend/env.bak/
+backend/venv.bak/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Security files
+*.pem
+*.key
+*.crt
+secrets/
+keys/
+
+# Monitoring and metrics
+prometheus_data/
+grafana_data/
+
+# Spark specific
+.file-manifest
 .spark-workbench-id
+.spark-initial-sha
+packages
+**/agent-eval-report*
+runtime.config.json
+spark.meta.json
+
+# DevContainer
+.devcontainer/
