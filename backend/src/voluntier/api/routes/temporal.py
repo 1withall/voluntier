@@ -1,9 +1,11 @@
 """Temporal workflow API routes."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from temporalio.client import Client
 
 from voluntier.config import settings
+from voluntier.dependencies import get_current_user, require_admin, require_organization
+from voluntier.models import User
 from voluntier.temporal_workflows.schemas import (
     VolunteerRegistrationRequest,
     EventCreationRequest,
@@ -25,7 +27,10 @@ router = APIRouter()
 
 
 @router.post("/volunteers/register", response_model=WorkflowResponse)
-async def register_volunteer(request: VolunteerRegistrationRequest):
+async def register_volunteer(
+    request: VolunteerRegistrationRequest,
+    current_user: User = Depends(get_current_user)
+):
     """Trigger volunteer registration workflow."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -56,7 +61,10 @@ async def register_volunteer(request: VolunteerRegistrationRequest):
 
 
 @router.post("/events/create", response_model=WorkflowResponse)
-async def create_event(request: EventCreationRequest):
+async def create_event(
+    request: EventCreationRequest,
+    current_user: User = Depends(require_organization)
+):
     """Trigger event creation workflow."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -86,7 +94,10 @@ async def create_event(request: EventCreationRequest):
 
 
 @router.post("/notifications/send", response_model=WorkflowResponse)
-async def send_notification(request: NotificationRequest):
+async def send_notification(
+    request: NotificationRequest,
+    current_user: User = Depends(require_admin)
+):
     """Trigger notification workflow."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -116,7 +127,10 @@ async def send_notification(request: NotificationRequest):
 
 
 @router.post("/agent/decide", response_model=WorkflowResponse)
-async def agent_decision(request: AgentDecisionRequest):
+async def agent_decision(
+    request: AgentDecisionRequest,
+    current_user: User = Depends(require_admin)
+):
     """Trigger agent decision workflow."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -206,7 +220,10 @@ async def validate_session(request: SessionValidationRequest):
 
 
 @router.post("/documents/upload", response_model=WorkflowResponse)
-async def upload_document(request: DocumentUploadRequest):
+async def upload_document(
+    request: DocumentUploadRequest,
+    current_user: User = Depends(get_current_user)
+):
     """Trigger document upload and processing workflow."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -236,7 +253,10 @@ async def upload_document(request: DocumentUploadRequest):
 
 
 @router.post("/documents/bulk-upload", response_model=WorkflowResponse)
-async def bulk_upload_documents(request: BulkDocumentRequest):
+async def bulk_upload_documents(
+    request: BulkDocumentRequest,
+    current_user: User = Depends(require_organization)
+):
     """Trigger bulk document processing workflow."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -266,7 +286,10 @@ async def bulk_upload_documents(request: BulkDocumentRequest):
 
 
 @router.post("/auth/check-privileges", response_model=WorkflowResponse)
-async def check_privileges(request: PrivilegeCheckRequest):
+async def check_privileges(
+    request: PrivilegeCheckRequest,
+    current_user: User = Depends(get_current_user)
+):
     """Trigger privilege check workflow."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -296,7 +319,10 @@ async def check_privileges(request: PrivilegeCheckRequest):
 
 
 @router.post("/telemetry/track", response_model=WorkflowResponse)
-async def track_telemetry(request: TelemetryEventRequest):
+async def track_telemetry(
+    request: TelemetryEventRequest,
+    current_user: User = Depends(get_current_user)
+):
     """Trigger telemetry tracking workflow."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -325,7 +351,10 @@ async def track_telemetry(request: TelemetryEventRequest):
 
 
 @router.get("/workflows/status/{workflow_id}")
-async def get_workflow_status(workflow_id: str):
+async def get_workflow_status(
+    workflow_id: str,
+    current_user: User = Depends(get_current_user)
+):
     """Get workflow execution status."""
     try:
         client = await Client.connect(settings.temporal.host)
@@ -353,7 +382,10 @@ async def get_workflow_status(workflow_id: str):
 
 
 @router.get("/workflows/list")
-async def list_workflows(limit: int = 10):
+async def list_workflows(
+    limit: int = 10,
+    current_user: User = Depends(require_admin)
+):
     """List recent workflows."""
     try:
         client = await Client.connect(settings.temporal.host)

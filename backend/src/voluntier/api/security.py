@@ -32,6 +32,7 @@ from voluntier.services.threat_detection import threat_detection_system
 from voluntier.services.honeypot_system import honeypot_manager
 from voluntier.middleware.security import SecurityUtils
 from voluntier.utils.logging import get_logger
+from voluntier.dependencies import get_current_user, require_admin
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/security", tags=["security"])
@@ -111,7 +112,8 @@ class ThreatIntelligenceCreateRequest(BaseModel):
 @router.get("/dashboard", response_model=Dict[str, Any])
 async def get_security_dashboard(
     timeframe: str = Query("24h", description="Timeframe: 1h, 24h, 7d, 30d"),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Get comprehensive security dashboard data"""
     
@@ -196,7 +198,8 @@ async def get_security_events(
     event_type: Optional[str] = Query(None),
     source_ip: Optional[str] = Query(None),
     since: Optional[datetime] = Query(None),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Get security events with filtering options"""
     
@@ -236,7 +239,10 @@ async def get_security_events(
     ]
 
 @router.post("/analyze-threat", response_model=Dict[str, Any])
-async def analyze_threat(request: ThreatAnalysisRequest):
+async def analyze_threat(
+    request: ThreatAnalysisRequest,
+    current_user: User = Depends(require_admin)
+):
     """Analyze a potential threat using all detection engines"""
     
     # Prepare threat context
@@ -290,7 +296,8 @@ async def get_security_incidents(
     offset: int = Query(0, ge=0),
     status: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Get security incidents with filtering"""
     
@@ -329,7 +336,8 @@ async def get_security_incidents(
 @router.post("/incidents", response_model=Dict[str, str])
 async def create_security_incident(
     request: IncidentCreateRequest,
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Create a new security incident"""
     
@@ -361,7 +369,8 @@ async def get_threat_intelligence(
     indicator_type: Optional[str] = Query(None),
     threat_type: Optional[str] = Query(None),
     min_score: Optional[float] = Query(None, ge=0, le=100),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Get threat intelligence indicators"""
     
@@ -400,7 +409,8 @@ async def get_threat_intelligence(
 @router.post("/threat-intelligence", response_model=Dict[str, str])
 async def add_threat_intelligence(
     request: ThreatIntelligenceCreateRequest,
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Add new threat intelligence indicator"""
     
@@ -433,7 +443,7 @@ async def add_threat_intelligence(
     return {"id": str(indicator.id), "status": "created"}
 
 @router.get("/honeypots/stats", response_model=Dict[str, Any])
-async def get_honeypot_statistics():
+async def get_honeypot_statistics(current_user: User = Depends(require_admin)):
     """Get honeypot deployment and hit statistics"""
     return await honeypot_manager.get_honeypot_statistics()
 
@@ -442,7 +452,8 @@ async def deploy_honeypot(
     path: str = Body(..., description="Honeypot path"),
     response_type: str = Body(..., description="Response type"),
     threat_level: str = Body("MEDIUM", description="Threat level"),
-    intelligence_value: str = Body("MEDIUM", description="Intelligence value")
+    intelligence_value: str = Body("MEDIUM", description="Intelligence value"),
+    current_user: User = Depends(require_admin)
 ):
     """Deploy a new honeypot endpoint"""
     
@@ -462,7 +473,8 @@ async def get_authentication_logs(
     result: Optional[str] = Query(None, description="Filter by auth result"),
     ip_address: Optional[str] = Query(None),
     since: Optional[datetime] = Query(None),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Get authentication logs with filtering"""
     
@@ -504,7 +516,8 @@ async def get_authentication_logs(
 async def get_active_sessions(
     limit: int = Query(100, le=500),
     high_risk_only: bool = Query(False),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Get active user sessions"""
     
@@ -537,7 +550,8 @@ async def get_active_sessions(
 async def terminate_session(
     session_id: str,
     reason: str = Body(..., description="Termination reason"),
-    db_session: AsyncSession = Depends(get_db_session)
+    db_session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Terminate a user session"""
     
@@ -563,7 +577,8 @@ async def terminate_session(
 @router.get("/metrics/summary", response_model=SecurityMetricsResponse)
 async def get_security_metrics(
     timeframe: str = Query("24h", description="Timeframe: 1h, 24h, 7d, 30d"),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
 ):
     """Get security metrics summary"""
     
@@ -646,7 +661,8 @@ async def get_security_metrics(
 @router.post("/rules/test", response_model=Dict[str, Any])
 async def test_security_rule(
     rule_logic: Dict[str, Any] = Body(...),
-    test_data: Dict[str, Any] = Body(...)
+    test_data: Dict[str, Any] = Body(...),
+    current_user: User = Depends(require_admin)
 ):
     """Test a security rule against sample data"""
     

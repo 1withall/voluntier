@@ -643,15 +643,109 @@ class AdvancedSecurityMiddleware(BaseHTTPMiddleware):
     
     async def get_user_context(self, request: Request) -> Dict:
         """Get user context for zero trust evaluation"""
-        # This would integrate with authentication system
-        # For now, return basic context
-        return {
-            "authenticated": "authorization" in request.headers,
-            "known_device": False,  # Would check device fingerprint
-            "consistent_location": True,  # Would check geolocation
-            "normal_behavior": True,  # Would check behavioral patterns
-            "trusted_network": False  # Would check network reputation
-        }
+        try:
+            # Extract JWT token from Authorization header
+            auth_header = request.headers.get("authorization", "")
+            if not auth_header.startswith("Bearer "):
+                return {
+                    "authenticated": False,
+                    "user_id": None,
+                    "user_role": None,
+                    "known_device": False,
+                    "consistent_location": True,
+                    "normal_behavior": True,
+                    "trusted_network": False
+                }
+
+            token = auth_header.split(" ")[1]
+
+            # Decode JWT token (similar to get_current_user dependency)
+            try:
+                from voluntier.dependencies import SECRET_KEY, ALGORITHM
+                import jwt
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                user_id = payload.get("sub")
+
+                if not user_id:
+                    return {
+                        "authenticated": False,
+                        "user_id": None,
+                        "user_role": None,
+                        "known_device": False,
+                        "consistent_location": True,
+                        "normal_behavior": True,
+                        "trusted_network": False
+                    }
+
+                # Get user from database for additional context
+                from voluntier.database import get_db_session
+                from sqlalchemy import select
+
+                async for session in get_db_session():
+                    result = await session.execute(select(User).where(User.id == user_id))
+                    user = result.scalar_one_or_none()
+
+                    if not user:
+                        return {
+                            "authenticated": False,
+                            "user_id": None,
+                            "user_role": None,
+                            "known_device": False,
+                            "consistent_location": True,
+                            "normal_behavior": True,
+                            "trusted_network": False
+                        }
+
+                    # Check device fingerprint (simplified)
+                    user_agent = request.headers.get("user-agent", "")
+                    known_device = user_agent in (user.device_trust_levels or {})
+
+                    # Check location consistency (simplified)
+                    client_ip = self.honeypot_manager.get_client_ip(request)
+                    consistent_location = True  # Would implement geolocation checking
+
+                    # Check behavioral patterns (simplified)
+                    normal_behavior = user.risk_score < 0.7 if user.risk_score else True
+
+                    # Check network reputation (simplified)
+                    trusted_network = client_ip not in self.suspicious_ips
+
+                    return {
+                        "authenticated": True,
+                        "user_id": str(user.id),
+                        "user_role": user.role.value if hasattr(user.role, 'value') else str(user.role),
+                        "known_device": known_device,
+                        "consistent_location": consistent_location,
+                        "normal_behavior": normal_behavior,
+                        "trusted_network": trusted_network,
+                        "risk_score": user.risk_score or 0.0,
+                        "account_active": user.is_active,
+                        "mfa_verified": user.mfa_settings.get("verified", False) if user.mfa_settings else False
+                    }
+
+            except Exception as e:
+                logger.warning(f"Failed to decode JWT token: {e}")
+                return {
+                    "authenticated": False,
+                    "user_id": None,
+                    "user_role": None,
+                    "known_device": False,
+                    "consistent_location": True,
+                    "normal_behavior": True,
+                    "trusted_network": False
+                }
+
+        except Exception as e:
+            logger.error(f"Error getting user context: {e}")
+            return {
+                "authenticated": False,
+                "user_id": None,
+                "user_role": None,
+                "known_device": False,
+                "consistent_location": True,
+                "normal_behavior": True,
+                "trusted_network": False
+            }
     
     async def validate_and_sanitize_input(self, request: Request):
         """Validate and sanitize all input"""
