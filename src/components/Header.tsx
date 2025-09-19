@@ -1,12 +1,12 @@
 import { UserProfile } from '../types/profiles'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { HandHeart, Users, Calendar, ChartBar, Shield, QrCode, Activity, FileText, ChartLine } from '@phosphor-icons/react'
+import { HandHeart, Users, Calendar, ChartBar, Shield, QrCode, Activity, FileText, ChartLine, Bell } from '@phosphor-icons/react'
 
 interface HeaderProps {
   userProfile: UserProfile | null
-  currentView: 'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'onboarding'
-  onViewChange: (view: 'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'onboarding') => void
+  currentView: 'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'notifications' | 'onboarding'
+  onViewChange: (view: 'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'notifications' | 'onboarding') => void
 }
 
 export function Header({ userProfile, currentView, onViewChange }: HeaderProps) {
@@ -40,6 +40,7 @@ export function Header({ userProfile, currentView, onViewChange }: HeaderProps) 
     { id: 'impact' as const, label: 'Impact', icon: ChartBar },
     { id: 'verification' as const, label: 'QR Verification', icon: QrCode },
     { id: 'document-verification' as const, label: 'Documents', icon: FileText },
+    { id: 'notifications' as const, label: 'Notifications', icon: Bell },
     { id: 'onboarding' as const, label: 'Onboarding', icon: ChartLine },
     { id: 'security' as const, label: 'Security', icon: Shield },
     { id: 'telemetry' as const, label: 'Analytics', icon: Activity },

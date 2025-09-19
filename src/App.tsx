@@ -11,7 +11,8 @@ import { SignupFlow } from './components/SignupFlow'
 import { QRVerificationSystem } from './components/QRVerificationSystem'
 import { TelemetryDashboard } from './components/TelemetryDashboard'
 import { UnifiedProfileView } from './components/profiles/UnifiedProfileView'
-import { DocumentVerification } from './components/verification/DocumentVerification'
+import { SecureDocumentUpload } from './components/upload/SecureDocumentUpload'
+import { NotificationCenter } from './components/notifications/NotificationCenter'
 import { OnboardingProgressTracker } from './components/onboarding/OnboardingProgressTracker'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -36,7 +37,7 @@ export interface VolunteerEvent {
 
 function App() {
   const [userProfile, setUserProfile] = useKV<UserProfile | null>('user-profile', null)
-  const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'onboarding'>('events')
+  const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'notifications' | 'onboarding'>('events')
   const [events, setEvents] = useKV<VolunteerEvent[]>('volunteer-events', [])
   const [registrations, setRegistrations] = useKV<{[eventId: string]: boolean}>('user-registrations', {})
   
@@ -186,7 +187,20 @@ function App() {
         return <TelemetryDashboard />
 
       case 'document-verification':
-        return <DocumentVerification userProfile={userProfile} />
+        return (
+          <SecureDocumentUpload 
+            userProfile={userProfile}
+            onUploadComplete={(doc) => {
+              trackUserAction('document_uploaded', 'verification', doc.documentType)
+            }}
+            onUploadError={(error) => {
+              trackUserAction('document_upload_failed', 'verification', error)
+            }}
+          />
+        )
+
+      case 'notifications':
+        return <NotificationCenter userProfile={userProfile} />
 
       case 'onboarding':
         return <OnboardingProgressTracker userProfile={userProfile} />
