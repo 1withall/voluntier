@@ -1,15 +1,47 @@
 {
-    "name": "spark-template",
+    "name": "voluntier-frontend",
+    "description": "Community volunteer coordination platform - Frontend React application",
+    "version": "0.8.0",
     "private": true,
-    "version": "0.0.0",
     "type": "module",
+    "keywords": [
+        "volunteer",
+        "community",
+        "nonprofit",
+        "react",
+        "typescript",
+        "tailwindcss"
+    ],
+    "homepage": "https://github.com/voluntier/voluntier",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/voluntier/voluntier.git"
+    },
+    "bugs": {
+        "url": "https://github.com/voluntier/voluntier/issues"
+    },
+    "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=9.0.0"
+    },
     "scripts": {
-        "dev": "vite",
-        "kill": "fuser -k 5000/tcp",
+        "dev": "vite --host 0.0.0.0 --port 5173",
         "build": "tsc -b --noCheck && vite build",
-        "lint": "eslint .",
-        "optimize": "vite optimize",
-        "preview": "vite preview"
+        "preview": "vite preview --host 0.0.0.0 --port 4173",
+        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+        "lint:fix": "eslint . --ext ts,tsx --fix",
+        "type-check": "tsc --noEmit",
+        "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+        "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "analyze": "npm run build && npx vite-bundle-analyzer dist",
+        "clean": "rm -rf dist node_modules/.vite",
+        "precommit": "npm run lint && npm run type-check && npm run format:check",
+        "kill": "fuser -k 5173/tcp 2>/dev/null || true",
+        "optimize": "vite optimize"
     },
     "dependencies": {
         "@github/spark": "^0.39.0",
