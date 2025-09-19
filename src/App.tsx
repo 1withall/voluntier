@@ -11,7 +11,7 @@ import { SignupFlow } from './components/SignupFlow'
 import { QRVerificationSystem } from './components/QRVerificationSystem'
 import { TelemetryDashboard } from './components/TelemetryDashboard'
 import { UnifiedProfileView } from './components/profiles/UnifiedProfileView'
-import { SecureDocumentUpload } from './components/upload/SecureDocumentUpload'
+import { EnhancedDocumentUpload } from './components/upload/EnhancedDocumentUpload'
 import { NotificationCenter } from './components/notifications/NotificationCenter'
 import { OnboardingProgressTracker } from './components/onboarding/OnboardingProgressTracker'
 import { Button } from './components/ui/button'
@@ -188,10 +188,14 @@ function App() {
 
       case 'document-verification':
         return (
-          <SecureDocumentUpload 
+          <EnhancedDocumentUpload 
             userProfile={userProfile}
-            onUploadComplete={(doc) => {
-              trackUserAction('document_uploaded', 'verification', doc.documentType)
+            onUploadComplete={(docs) => {
+              if (Array.isArray(docs)) {
+                docs.forEach(doc => trackUserAction('document_uploaded', 'verification', doc.documentType))
+              } else {
+                trackUserAction('bulk_upload_completed', 'verification', `${docs.successfulUploads}_files`)
+              }
             }}
             onUploadError={(error) => {
               trackUserAction('document_upload_failed', 'verification', error)
