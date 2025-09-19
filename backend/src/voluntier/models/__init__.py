@@ -78,6 +78,19 @@ class User(Base):
     verification_date = Column(DateTime(timezone=True))
     trust_score = Column(Float, default=0.0)
     
+    # Zero-trust authentication fields
+    hardware_token_credentials = Column(JSON, default=dict)  # WebAuthn/FIDO2 credentials
+    biometric_data = Column(JSON, default=dict)  # Biometric templates and metadata
+    risk_score = Column(Float, default=0.0)  # Dynamic risk assessment score
+    mfa_settings = Column(JSON, default=dict)  # MFA configuration and preferences
+    device_trust_levels = Column(JSON, default=dict)  # Trusted device registry
+    last_biometric_verification = Column(DateTime(timezone=True))
+    password_last_changed = Column(DateTime(timezone=True))
+    account_lockout_until = Column(DateTime(timezone=True))
+    failed_login_attempts = Column(Integer, default=0)
+    security_questions = Column(JSON, default=list)  # Encrypted security questions
+    recovery_codes = Column(JSON, default=list)  # Backup recovery codes
+    
     # Statistics
     hours_logged = Column(Float, default=0.0)
     events_attended = Column(Integer, default=0)
@@ -632,6 +645,12 @@ class UserSession(Base):
     refresh_token = Column(String(255), unique=True, index=True)
     device_fingerprint = Column(String(255))
     
+    # Hardware token and biometric session data
+    hardware_token_id = Column(String(255))  # Associated hardware token
+    biometric_session_id = Column(String(255))  # Biometric session identifier
+    encrypted_session_key = Column(String(500))  # Encrypted session key for zero-trust
+    session_signature = Column(String(500))  # Cryptographic signature of session
+    
     # Session details
     ip_address = Column(String(45))
     user_agent = Column(String(500))
@@ -650,9 +669,15 @@ class UserSession(Base):
     risk_score = Column(Float, default=0.0)
     
     # Authentication details
-    auth_method = Column(String(50))  # password, mfa, oauth, etc.
+    auth_method = Column(String(50))  # password, mfa, oauth, hardware_token, biometric, etc.
     mfa_verified = Column(Boolean, default=False)
     auth_factors = Column(JSON, default=list)
+    
+    # Zero-trust session security
+    session_risk_score = Column(Float, default=0.0)  # Session-specific risk assessment
+    behavioral_biometrics = Column(JSON, default=dict)  # Keystroke patterns, mouse movements
+    continuous_auth_score = Column(Float, default=1.0)  # Continuous authentication confidence
+    last_auth_verification = Column(DateTime(timezone=True))
     
     # Session lifecycle
     created_at = Column(DateTime(timezone=True), server_default=func.now())

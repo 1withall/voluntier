@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from voluntier.database import get_db_session_context
 from voluntier.models import User, AdminUser, UserSession, SecurityLog
-from voluntier.services.auth import AuthService
+from voluntier.services.auth import AdvancedAuthService
 from voluntier.services.security import SecurityService
 from voluntier.utils.validation import validate_email, validate_password_strength
 from voluntier.utils.logging import get_logger
@@ -111,7 +111,7 @@ class AuthActivities:
         logger.info(f"Authenticating user: {email}")
         
         try:
-            auth_service = AuthService()
+            auth_service = AdvancedAuthService()
             
             async with get_db_session_context() as session:
                 # Find user
@@ -152,6 +152,19 @@ class AuthActivities:
                         {"user_id": str(user.id), "reason": "invalid_password"}
                     )
                     
+                    # Integrate with security monitoring for failed attempt
+                    await auth_service.integrate_with_security_monitoring({
+                        "event_type": "failed_authentication",
+                        "description": f"Failed authentication attempt for user {user.email}",
+                        "user_id": str(user.id),
+                        "auth_method": "password",
+                        "ip_address": auth_request.get("ip_address", "unknown"),
+                        "user_agent": auth_request.get("user_agent", "unknown"),
+                        "risk_score": 0.8,  # High risk for failed auth
+                        "location": {},
+                        "behavioral_data": {}
+                    })
+                    
                     return {
                         "authenticated": False,
                         "reason": "invalid_credentials",
@@ -188,6 +201,19 @@ class AuthActivities:
                     {"user_id": str(user.id)}
                 )
                 
+                # Integrate with security monitoring
+                await auth_service.integrate_with_security_monitoring({
+                    "event_type": "successful_authentication",
+                    "description": f"User {user.email} successfully authenticated",
+                    "user_id": str(user.id),
+                    "auth_method": "password",
+                    "ip_address": auth_request.get("ip_address", "unknown"),
+                    "user_agent": auth_request.get("user_agent", "unknown"),
+                    "risk_score": 0.1,  # Low risk for successful auth
+                    "location": {},  # Would be populated from IP geolocation
+                    "behavioral_data": {}
+                })
+                
                 return {
                     "authenticated": True,
                     "user_id": str(user.id),
@@ -222,7 +248,7 @@ class AuthActivities:
         logger.info(f"Creating session for user: {user_id}")
         
         try:
-            auth_service = AuthService()
+            auth_service = AdvancedAuthService()
             
             # Generate session token
             session_token = auth_service.generate_session_token()
@@ -474,6 +500,544 @@ class AuthActivities:
         except Exception as e:
             logger.error(f"Privilege check failed: {str(e)}")
             raise
+    
+        except Exception as e:
+            logger.error(f"Privilege check failed: {str(e)}")
+            raise
+    
+    @activity.defn
+    async def zero_trust_authenticate(self, auth_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Perform zero-trust authentication with risk assessment.
+        
+        Args:
+            auth_request: Authentication request with context
+            
+        Returns:
+            Zero-trust authentication result
+        """
+        from voluntier.services.auth import AdvancedAuthService, AuthenticationContext
+        
+        email = auth_request["email"].lower()
+        password = auth_request["password"]
+        
+        logger.info(f"Zero-trust authentication for: {email}")
+        
+        try:
+            # Create authentication context
+            context = AuthenticationContext(
+                user_id=None,  # Will be set after user lookup
+                ip_address=auth_request.get("ip_address", "unknown"),
+                user_agent=auth_request.get("user_agent", "unknown"),
+                device_fingerprint=auth_request.get("device_fingerprint", ""),
+                location=auth_request.get("location", {}),
+                timestamp=datetime.utcnow(),
+                risk_score=0.0,  # Will be calculated
+                behavioral_data=auth_request.get("behavioral_data", {})
+            )
+            
+            auth_service = AdvancedAuthService()
+            await auth_service.initialize()
+            
+            # Perform authentication
+            success, session, message = await auth_service.authenticate_user(email, password, context)
+            
+            result = {
+                "authenticated": success,
+                "message": message,
+                "session_id": session.session_id if session else None,
+                "user_id": session.user_id if session else None,
+                "risk_score": session.risk_score if session else 0.0,
+                "requires_additional_factors": False,
+                "additional_factors": []
+            }
+            
+            if success and session:
+                # Check if additional factors are required
+                async with get_db_session_context() as db_session:
+                    stmt = select(User).where(User.email == email)
+                    db_result = await db_session.execute(stmt)
+                    user = db_result.scalar_one_or_none()
+                    
+                    if user:
+                        required_factors = await auth_service._determine_auth_factors(user, session.risk_score)
+                        result["requires_additional_factors"] = len(required_factors) > 1
+                        result["additional_factors"] = required_factors[1:]  # Exclude password
+                
+                # Log successful authentication
+                logger.info(f"Zero-trust authentication successful for {email}, risk: {session.risk_score:.2f}")
+            else:
+                # Log failed authentication
+                logger.warning(f"Zero-trust authentication failed for {email}: {message}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Zero-trust authentication error: {str(e)}")
+            return {
+                "authenticated": False,
+                "message": "Authentication service error",
+                "session_id": None,
+                "user_id": None,
+                "risk_score": 1.0,
+                "requires_additional_factors": False,
+                "additional_factors": []
+            }
+    
+    @activity.defn
+    async def register_hardware_token(self, token_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Register a hardware token for zero-trust authentication.
+        
+        Args:
+            token_request: Hardware token registration request
+            
+        Returns:
+            Registration result
+        """
+        from voluntier.services.auth import AdvancedAuthService
+        
+        user_id = token_request["user_id"]
+        challenge_response = token_request["challenge_response"]
+        
+        logger.info(f"Registering hardware token for user: {user_id}")
+        
+        try:
+            auth_service = AdvancedAuthService()
+            await auth_service.initialize()
+            
+            success = await auth_service.register_hardware_token(user_id, challenge_response)
+            
+            return {
+                "registered": success,
+                "user_id": user_id,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Hardware token registration error: {str(e)}")
+            return {
+                "registered": False,
+                "user_id": user_id,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    
+    @activity.defn
+    async def authenticate_with_hardware_token(self, token_auth_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Authenticate using hardware token.
+        
+        Args:
+            token_auth_request: Hardware token authentication request
+            
+        Returns:
+            Authentication result
+        """
+        from voluntier.services.auth import AdvancedAuthService
+        
+        user_id = token_auth_request["user_id"]
+        challenge_response = token_auth_request["challenge_response"]
+        
+        logger.info(f"Hardware token authentication for user: {user_id}")
+        
+        try:
+            auth_service = AdvancedAuthService()
+            await auth_service.initialize()
+            
+            success = await auth_service.authenticate_with_hardware_token(user_id, challenge_response)
+            
+            # Integrate with security monitoring
+            event_type = "successful_hardware_token_auth" if success else "failed_hardware_token_auth"
+            risk_score = 0.1 if success else 0.7
+            
+            await auth_service.integrate_with_security_monitoring({
+                "event_type": event_type,
+                "description": f"Hardware token authentication {'successful' if success else 'failed'} for user {user_id}",
+                "user_id": user_id,
+                "auth_method": "hardware_token",
+                "ip_address": token_auth_request.get("ip_address", "unknown"),
+                "user_agent": token_auth_request.get("user_agent", "unknown"),
+                "risk_score": risk_score,
+                "location": {},
+                "behavioral_data": {},
+                "device_fingerprint": challenge_response.get("device_fingerprint")
+            })
+            
+            return {
+                "authenticated": success,
+                "user_id": user_id,
+                "auth_method": "hardware_token",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Hardware token authentication error: {str(e)}")
+            return {
+                "authenticated": False,
+                "user_id": user_id,
+                "auth_method": "hardware_token",
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    
+    @activity.defn
+    async def enroll_biometric_data(self, biometric_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enroll biometric data for authentication.
+        
+        Args:
+            biometric_request: Biometric enrollment request
+            
+        Returns:
+            Enrollment result
+        """
+        from voluntier.services.auth import AdvancedAuthService
+        
+        user_id = biometric_request["user_id"]
+        biometric_type = biometric_request["biometric_type"]
+        biometric_data = biometric_request["biometric_data"]  # base64 encoded
+        quality_score = biometric_request.get("quality_score", 0.8)
+        
+        logger.info(f"Enrolling {biometric_type} biometric for user: {user_id}")
+        
+        try:
+            # Decode biometric data
+            import base64
+            decoded_data = base64.b64decode(biometric_data)
+            
+            auth_service = AdvancedAuthService()
+            await auth_service.initialize()
+            
+            success = await auth_service.enroll_biometric(
+                user_id, biometric_type, decoded_data, quality_score
+            )
+            
+            return {
+                "enrolled": success,
+                "user_id": user_id,
+                "biometric_type": biometric_type,
+                "quality_score": quality_score,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Biometric enrollment error: {str(e)}")
+            return {
+                "enrolled": False,
+                "user_id": user_id,
+                "biometric_type": biometric_type,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    
+    @activity.defn
+    async def verify_biometric_data(self, biometric_verify_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Verify biometric data for authentication.
+        
+        Args:
+            biometric_verify_request: Biometric verification request
+            
+        Returns:
+            Verification result
+        """
+        from voluntier.services.auth import AdvancedAuthService
+        
+        user_id = biometric_verify_request["user_id"]
+        biometric_type = biometric_verify_request["biometric_type"]
+        biometric_data = biometric_verify_request["biometric_data"]  # base64 encoded
+        
+        logger.info(f"Verifying {biometric_type} biometric for user: {user_id}")
+        
+        try:
+            # Decode biometric data
+            import base64
+            decoded_data = base64.b64decode(biometric_data)
+            
+            auth_service = AdvancedAuthService()
+            await auth_service.initialize()
+            
+            success, confidence = await auth_service.verify_biometric(
+                user_id, biometric_type, decoded_data
+            )
+            
+            # Integrate with security monitoring
+            event_type = "successful_biometric_auth" if success else "failed_biometric_auth"
+            risk_score = 0.1 if success else 0.6
+            
+            await auth_service.integrate_with_security_monitoring({
+                "event_type": event_type,
+                "description": f"Biometric authentication {'successful' if success else 'failed'} for user {user_id}",
+                "user_id": user_id,
+                "auth_method": "biometric",
+                "ip_address": biometric_verify_request.get("ip_address", "unknown"),
+                "user_agent": biometric_verify_request.get("user_agent", "unknown"),
+                "risk_score": risk_score,
+                "location": {},
+                "behavioral_data": {},
+                "biometric_type": biometric_type,
+                "confidence_score": confidence
+            })
+            
+            return {
+                "verified": success,
+                "user_id": user_id,
+                "biometric_type": biometric_type,
+                "confidence_score": confidence,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Biometric verification error: {str(e)}")
+            return {
+                "verified": False,
+                "user_id": user_id,
+                "biometric_type": biometric_type,
+                "confidence_score": 0.0,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    
+    @activity.defn
+    async def assess_authentication_risk(self, risk_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Assess authentication risk for continuous monitoring.
+        
+        Args:
+            risk_request: Risk assessment request
+            
+        Returns:
+            Risk assessment result
+        """
+        from voluntier.services.auth import AuthenticationContext, RiskAssessmentEngine
+        
+        user_id = risk_request.get("user_id")
+        session_id = risk_request.get("session_id")
+        
+        logger.info(f"Assessing authentication risk for session: {session_id}")
+        
+        try:
+            # Create risk context
+            context = AuthenticationContext(
+                user_id=user_id,
+                ip_address=risk_request.get("ip_address", "unknown"),
+                user_agent=risk_request.get("user_agent", "unknown"),
+                device_fingerprint=risk_request.get("device_fingerprint", ""),
+                location=risk_request.get("location", {}),
+                timestamp=datetime.utcnow(),
+                risk_score=0.0,  # Will be calculated
+                behavioral_data=risk_request.get("behavioral_data", {})
+            )
+            
+            risk_engine = RiskAssessmentEngine()
+            risk_score = risk_engine.assess_authentication_risk(context)
+            
+            # Determine risk level
+            if risk_score >= 0.8:
+                risk_level = "CRITICAL"
+                actions = ["require_mfa", "notify_security", "log_incident"]
+            elif risk_score >= 0.6:
+                risk_level = "HIGH"
+                actions = ["require_mfa", "log_warning"]
+            elif risk_score >= 0.4:
+                risk_level = "MEDIUM"
+                actions = ["monitor_session", "log_info"]
+            else:
+                risk_level = "LOW"
+                actions = ["normal_operation"]
+            
+            return {
+                "session_id": session_id,
+                "user_id": user_id,
+                "risk_score": risk_score,
+                "risk_level": risk_level,
+                "recommended_actions": actions,
+                "assessment_timestamp": datetime.utcnow().isoformat(),
+                "context": {
+                    "ip_address": context.ip_address,
+                    "location": context.location,
+                    "device_fingerprint": context.device_fingerprint
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Risk assessment error: {str(e)}")
+            return {
+                "session_id": session_id,
+                "user_id": user_id,
+                "risk_score": 1.0,
+                "risk_level": "CRITICAL",
+                "recommended_actions": ["block_session", "notify_security"],
+                "error": str(e),
+                "assessment_timestamp": datetime.utcnow().isoformat()
+            }
+    
+    @activity.defn
+    async def generate_secure_credentials(self, credential_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate secure credentials for user.
+        
+        Args:
+            credential_request: Credential generation request
+            
+        Returns:
+            Generated credentials
+        """
+        from voluntier.services.auth import AdvancedAuthService
+        
+        user_id = credential_request["user_id"]
+        include_password = credential_request.get("include_password", True)
+        include_recovery_codes = credential_request.get("include_recovery_codes", True)
+        password_length = credential_request.get("password_length", 21)
+        
+        logger.info(f"Generating secure credentials for user: {user_id}")
+        
+        try:
+            auth_service = AdvancedAuthService()
+            await auth_service.initialize()
+            
+            credentials = {
+                "user_id": user_id,
+                "generated_at": datetime.utcnow().isoformat()
+            }
+            
+            if include_password:
+                password = await auth_service.generate_secure_password(password_length)
+                hashed_password = await auth_service.hash_password(password)
+                
+                credentials["password"] = password  # Plain text for initial delivery
+                credentials["hashed_password"] = hashed_password
+                credentials["password_length"] = len(password)
+            
+            if include_recovery_codes:
+                recovery_codes = await auth_service.generate_recovery_codes()
+                credentials["recovery_codes"] = recovery_codes
+            
+            return credentials
+            
+        except Exception as e:
+            logger.error(f"Credential generation error: {str(e)}")
+            return {
+                "user_id": user_id,
+                "error": str(e),
+                "generated_at": datetime.utcnow().isoformat()
+            }
+    
+    @activity.defn
+    async def validate_session_security(self, session_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate session security and continuous authentication.
+        
+        Args:
+            session_request: Session validation request
+            
+        Returns:
+            Session validation result
+        """
+        from voluntier.services.auth import AdvancedAuthService
+        
+        session_id = session_request["session_id"]
+        
+        logger.info(f"Validating session security for: {session_id}")
+        
+        try:
+            auth_service = AdvancedAuthService()
+            await auth_service.initialize()
+            
+            session = await auth_service.validate_session(session_id)
+            
+            if not session:
+                return {
+                    "valid": False,
+                    "session_id": session_id,
+                    "reason": "session_not_found_or_expired",
+                    "validation_timestamp": datetime.utcnow().isoformat()
+                }
+            
+            # Check continuous authentication score
+            continuous_auth_ok = session.continuous_auth_score >= 0.7
+            
+            # Check risk score
+            risk_ok = session.risk_score <= 0.6
+            
+            # Overall validation
+            valid = continuous_auth_ok and risk_ok
+            
+            return {
+                "valid": valid,
+                "session_id": session_id,
+                "user_id": session.user_id,
+                "risk_score": session.risk_score,
+                "continuous_auth_score": session.continuous_auth_score,
+                "expires_at": session.expires_at.isoformat(),
+                "validation_timestamp": datetime.utcnow().isoformat(),
+                "issues": [] if valid else [
+                    "low_continuous_auth_score" if not continuous_auth_ok else None,
+                    "high_risk_score" if not risk_ok else None
+                ]
+            }
+            
+        except Exception as e:
+            logger.error(f"Session validation error: {str(e)}")
+            return {
+                "valid": False,
+                "session_id": session_id,
+                "error": str(e),
+                "validation_timestamp": datetime.utcnow().isoformat()
+            }
+    
+    @activity.defn
+    async def update_user_password(self, password_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update user password hash.
+        
+        Args:
+            password_request: Password update request
+            
+        Returns:
+            Update result
+        """
+        user_id = password_request["user_id"]
+        hashed_password = password_request["hashed_password"]
+        
+        logger.info(f"Updating password hash for user: {user_id}")
+        
+        try:
+            async with get_db_session_context() as session:
+                # Get user
+                stmt = select(User).where(User.id == user_id)
+                result = await session.execute(stmt)
+                user = result.scalar_one_or_none()
+                
+                if not user:
+                    return {
+                        "updated": False,
+                        "user_id": user_id,
+                        "reason": "user_not_found"
+                    }
+                
+                # Update password
+                user.hashed_password = hashed_password
+                user.password_last_changed = datetime.utcnow()
+                user.failed_login_attempts = 0  # Reset failed attempts
+                user.account_lockout_until = None  # Clear any lockout
+                
+                await session.commit()
+                
+                return {
+                    "updated": True,
+                    "user_id": user_id,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                
+        except Exception as e:
+            logger.error(f"Password update error: {str(e)}")
+            return {
+                "updated": False,
+                "user_id": user_id,
+                "error": str(e)
+            }
     
     async def _log_security_event(self, session: AsyncSession, event_type: str, event_data: Dict[str, Any]) -> None:
         """Log security event to database."""

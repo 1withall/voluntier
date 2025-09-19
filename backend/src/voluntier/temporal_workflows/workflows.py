@@ -15,6 +15,7 @@ from .activities import (
     security_activities,
     data_activities,
     llm_activities,
+    auth_activities,
 )
 from .schemas import (
     VolunteerRegistrationRequest,
@@ -721,3 +722,436 @@ class DataSyncWorkflow:
         except Exception as e:
             workflow.logger.error(f"Data sync workflow failed: {str(e)}")
             return {"status": "error", "message": str(e)}
+
+
+@workflow.defn
+class ZeroTrustAuthenticationWorkflow:
+    """Workflow for zero-trust authentication with risk assessment and multi-factor verification."""
+    
+    @workflow.run
+    async def run(self, auth_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Main workflow for zero-trust authentication.
+        
+        Args:
+            auth_request: Authentication request with user credentials and context
+            
+        Returns:
+            Authentication result with session information
+        """
+        workflow.logger.info(f"Starting zero-trust authentication workflow for {auth_request.get('email')}")
+        
+        # Create retry policy for authentication
+        retry_policy = RetryPolicy(
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=10),
+            maximum_attempts=3,
+        )
+        
+        try:
+            # Step 1: Validate login attempt with security checks
+            validation_result = await workflow.execute_activity(
+                auth_activities.validate_login_attempt,
+                {
+                    "email": auth_request["email"],
+                    "password": auth_request["password"],
+                    "ip_address": auth_request.get("ip_address", "unknown"),
+                    "user_agent": auth_request.get("user_agent", "unknown"),
+                },
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
+            
+            if not validation_result["valid"]:
+                workflow.logger.warning(f"Authentication validation failed: {validation_result['errors']}")
+                return {
+                    "authenticated": False,
+                    "reason": "validation_failed",
+                    "errors": validation_result["errors"],
+                    "security_flags": validation_result["security_flags"]
+                }
+            
+            # Step 2: Perform zero-trust authentication
+            auth_result = await workflow.execute_activity(
+                auth_activities.zero_trust_authenticate,
+                auth_request,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
+            
+            if not auth_result["authenticated"]:
+                workflow.logger.warning(f"Zero-trust authentication failed: {auth_result['message']}")
+                return auth_result
+            
+            # Step 3: Handle additional authentication factors if required
+            if auth_result["requires_additional_factors"]:
+                workflow.logger.info(f"Additional factors required: {auth_result['additional_factors']}")
+                
+                # For now, we'll handle MFA as an example
+                if "mfa" in auth_result["additional_factors"]:
+                    # In a real implementation, this would trigger MFA challenge
+                    # and wait for user response
+                    workflow.logger.info("MFA challenge would be sent to user")
+                
+                if "hardware_token" in auth_result["additional_factors"]:
+                    # Hardware token challenge would be initiated
+                    workflow.logger.info("Hardware token challenge would be initiated")
+                
+                if "biometric" in auth_result["additional_factors"]:
+                    # Biometric verification would be requested
+                    workflow.logger.info("Biometric verification would be requested")
+            
+            # Step 4: Continuous risk monitoring setup
+            if auth_result["authenticated"]:
+                # Set up continuous monitoring for the session
+                monitoring_result = await workflow.execute_activity(
+                    auth_activities.assess_authentication_risk,
+                    {
+                        "user_id": auth_result["user_id"],
+                        "session_id": auth_result["session_id"],
+                        "ip_address": auth_request.get("ip_address"),
+                        "user_agent": auth_request.get("user_agent"),
+                        "device_fingerprint": auth_request.get("device_fingerprint"),
+                        "location": auth_request.get("location", {}),
+                        "behavioral_data": auth_request.get("behavioral_data", {}),
+                    },
+                    start_to_close_timeout=timedelta(seconds=15),
+                    retry_policy=retry_policy,
+                )
+                
+                # Log monitoring setup
+                workflow.logger.info(f"Risk monitoring established for session {auth_result['session_id']}: risk={monitoring_result['risk_score']:.2f}")
+            
+            return auth_result
+            
+        except Exception as e:
+            workflow.logger.error(f"Zero-trust authentication workflow failed: {str(e)}")
+            return {
+                "authenticated": False,
+                "reason": "workflow_error",
+                "error": str(e)
+            }
+
+
+@workflow.defn
+class HardwareTokenRegistrationWorkflow:
+    """Workflow for registering hardware tokens (WebAuthn/FIDO2)."""
+    
+    @workflow.run
+    async def run(self, registration_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Register a hardware token for a user.
+        
+        Args:
+            registration_request: Token registration request
+            
+        Returns:
+            Registration result
+        """
+        user_id = registration_request["user_id"]
+        workflow.logger.info(f"Starting hardware token registration for user {user_id}")
+        
+        retry_policy = RetryPolicy(
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=10),
+            maximum_attempts=3,
+        )
+        
+        try:
+            # Step 1: Validate user and permissions
+            # (In a real implementation, check if user can register tokens)
+            
+            # Step 2: Register the hardware token
+            registration_result = await workflow.execute_activity(
+                auth_activities.register_hardware_token,
+                registration_request,
+                start_to_close_timeout=timedelta(minutes=2),
+                retry_policy=retry_policy,
+            )
+            
+            if registration_result["registered"]:
+                workflow.logger.info(f"Hardware token registered successfully for user {user_id}")
+                
+                # Step 3: Update user security profile
+                # (Could trigger additional security updates)
+                
+                return {
+                    "status": "success",
+                    "user_id": user_id,
+                    "registration_timestamp": registration_result["timestamp"]
+                }
+            else:
+                workflow.logger.warning(f"Hardware token registration failed for user {user_id}")
+                return {
+                    "status": "failed",
+                    "user_id": user_id,
+                    "error": registration_result.get("error", "Unknown error")
+                }
+                
+        except Exception as e:
+            workflow.logger.error(f"Hardware token registration workflow failed: {str(e)}")
+            return {
+                "status": "error",
+                "user_id": user_id,
+                "error": str(e)
+            }
+
+
+@workflow.defn
+class BiometricEnrollmentWorkflow:
+    """Workflow for enrolling biometric data."""
+    
+    @workflow.run
+    async def run(self, enrollment_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enroll biometric data for a user.
+        
+        Args:
+            enrollment_request: Biometric enrollment request
+            
+        Returns:
+            Enrollment result
+        """
+        user_id = enrollment_request["user_id"]
+        biometric_type = enrollment_request["biometric_type"]
+        
+        workflow.logger.info(f"Starting {biometric_type} biometric enrollment for user {user_id}")
+        
+        retry_policy = RetryPolicy(
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=10),
+            maximum_attempts=3,
+        )
+        
+        try:
+            # Step 1: Validate biometric data quality
+            if enrollment_request.get("quality_score", 0) < 0.7:
+                return {
+                    "status": "failed",
+                    "reason": "insufficient_quality",
+                    "user_id": user_id,
+                    "biometric_type": biometric_type
+                }
+            
+            # Step 2: Enroll biometric data
+            enrollment_result = await workflow.execute_activity(
+                auth_activities.enroll_biometric_data,
+                enrollment_request,
+                start_to_close_timeout=timedelta(minutes=1),
+                retry_policy=retry_policy,
+            )
+            
+            if enrollment_result["enrolled"]:
+                workflow.logger.info(f"Biometric {biometric_type} enrolled successfully for user {user_id}")
+                
+                return {
+                    "status": "success",
+                    "user_id": user_id,
+                    "biometric_type": biometric_type,
+                    "quality_score": enrollment_result["quality_score"],
+                    "enrollment_timestamp": enrollment_result["timestamp"]
+                }
+            else:
+                workflow.logger.warning(f"Biometric enrollment failed for user {user_id}")
+                return {
+                    "status": "failed",
+                    "user_id": user_id,
+                    "biometric_type": biometric_type,
+                    "error": enrollment_result.get("error", "Unknown error")
+                }
+                
+        except Exception as e:
+            workflow.logger.error(f"Biometric enrollment workflow failed: {str(e)}")
+            return {
+                "status": "error",
+                "user_id": user_id,
+                "biometric_type": biometric_type,
+                "error": str(e)
+            }
+
+
+@workflow.defn
+class ContinuousAuthenticationWorkflow:
+    """Workflow for continuous authentication monitoring."""
+    
+    @workflow.run
+    async def run(self, monitoring_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Monitor authentication session continuously.
+        
+        Args:
+            monitoring_request: Session monitoring request
+            
+        Returns:
+            Monitoring result
+        """
+        session_id = monitoring_request["session_id"]
+        workflow.logger.info(f"Starting continuous authentication monitoring for session {session_id}")
+        
+        retry_policy = RetryPolicy(
+            initial_interval=timedelta(seconds=5),
+            backoff_coefficient=1.5,
+            maximum_interval=timedelta(minutes=1),
+            maximum_attempts=5,
+        )
+        
+        try:
+            monitoring_results = []
+            
+            # Continuous monitoring loop (simplified - would run for session duration)
+            for i in range(10):  # Limited iterations for demo
+                # Step 1: Assess current risk
+                risk_assessment = await workflow.execute_activity(
+                    auth_activities.assess_authentication_risk,
+                    monitoring_request,
+                    start_to_close_timeout=timedelta(seconds=15),
+                    retry_policy=retry_policy,
+                )
+                
+                monitoring_results.append({
+                    "iteration": i + 1,
+                    "timestamp": risk_assessment["assessment_timestamp"],
+                    "risk_score": risk_assessment["risk_score"],
+                    "risk_level": risk_assessment["risk_level"],
+                    "actions": risk_assessment["recommended_actions"]
+                })
+                
+                # Step 2: Validate session security
+                session_validation = await workflow.execute_activity(
+                    auth_activities.validate_session_security,
+                    {"session_id": session_id},
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=retry_policy,
+                )
+                
+                if not session_validation["valid"]:
+                    workflow.logger.warning(f"Session {session_id} security validation failed")
+                    break
+                
+                # Step 3: Execute recommended security actions
+                if risk_assessment["risk_level"] in ["HIGH", "CRITICAL"]:
+                    workflow.logger.warning(f"High risk detected for session {session_id}: {risk_assessment['risk_score']}")
+                    
+                    # Could trigger additional verification or session termination
+                    if "require_mfa" in risk_assessment["recommended_actions"]:
+                        workflow.logger.info("Additional MFA verification would be triggered")
+                    
+                    if "notify_security" in risk_assessment["recommended_actions"]:
+                        # Trigger security alert
+                        await workflow.execute_activity(
+                            security_activities.create_security_alert,
+                            {
+                                "alert_type": "HIGH_RISK_SESSION",
+                                "severity": "HIGH",
+                                "description": f"High risk activity detected in session {session_id}",
+                                "session_id": session_id,
+                                "risk_score": risk_assessment["risk_score"]
+                            },
+                            start_to_close_timeout=timedelta(seconds=10),
+                            retry_policy=retry_policy,
+                        )
+                
+                # Wait before next assessment (in production, this would be configurable)
+                await asyncio.sleep(30)  # 30 second intervals
+            
+            return {
+                "status": "completed",
+                "session_id": session_id,
+                "monitoring_results": monitoring_results,
+                "total_assessments": len(monitoring_results),
+                "final_risk_score": monitoring_results[-1]["risk_score"] if monitoring_results else 0.0
+            }
+            
+        except Exception as e:
+            workflow.logger.error(f"Continuous authentication monitoring failed: {str(e)}")
+            return {
+                "status": "error",
+                "session_id": session_id,
+                "error": str(e)
+            }
+
+
+@workflow.defn
+class SecureCredentialGenerationWorkflow:
+    """Workflow for generating secure credentials."""
+    
+    @workflow.run
+    async def run(self, credential_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate secure credentials for a user.
+        
+        Args:
+            credential_request: Credential generation request
+            
+        Returns:
+            Generated credentials
+        """
+        user_id = credential_request["user_id"]
+        workflow.logger.info(f"Generating secure credentials for user {user_id}")
+        
+        retry_policy = RetryPolicy(
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=10),
+            maximum_attempts=3,
+        )
+        
+        try:
+            # Step 1: Generate secure credentials
+            credentials = await workflow.execute_activity(
+                auth_activities.generate_secure_credentials,
+                credential_request,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
+            
+            if "error" in credentials:
+                workflow.logger.error(f"Credential generation failed for user {user_id}: {credentials['error']}")
+                return {
+                    "status": "failed",
+                    "user_id": user_id,
+                    "error": credentials["error"]
+                }
+            
+            # Step 2: Store hashed password in database (if generated)
+            if "hashed_password" in credentials:
+                # Update user record with new hashed password
+                await workflow.execute_activity(
+                    auth_activities.update_user_password,
+                    {
+                        "user_id": user_id,
+                        "hashed_password": credentials["hashed_password"]
+                    },
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=retry_policy,
+                )
+            
+            # Step 3: Store recovery codes securely
+            if "recovery_codes" in credentials:
+                # In production, encrypt and store recovery codes
+                workflow.logger.info(f"Generated {len(credentials['recovery_codes'])} recovery codes for user {user_id}")
+            
+            # Log credential generation
+            workflow.logger.info(f"Secure credentials generated successfully for user {user_id}")
+            
+            # Return credentials (without sensitive data for security)
+            return {
+                "status": "success",
+                "user_id": user_id,
+                "generated_at": credentials["generated_at"],
+                "includes_password": "password" in credentials,
+                "includes_recovery_codes": "recovery_codes" in credentials,
+                "password_length": credentials.get("password_length"),
+                "recovery_codes_count": len(credentials.get("recovery_codes", []))
+            }
+            
+        except Exception as e:
+            workflow.logger.error(f"Secure credential generation workflow failed: {str(e)}")
+            return {
+                "status": "error",
+                "user_id": user_id,
+                "error": str(e)
+            }

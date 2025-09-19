@@ -105,6 +105,179 @@ class TemporalWorkflowService {
   }
 
   /**
+   * Zero-Trust Authentication Methods
+   */
+  async zeroTrustAuthenticate(authData: {
+    email: string
+    password: string
+    ipAddress?: string
+    userAgent?: string
+    deviceFingerprint?: string
+    location?: any
+    behavioralData?: any
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/zero-trust-authenticate', {
+      email: authData.email,
+      password: authData.password,
+      ip_address: authData.ipAddress || 'unknown',
+      user_agent: authData.userAgent || navigator.userAgent,
+      device_fingerprint: authData.deviceFingerprint || this.generateDeviceFingerprint(),
+      location: authData.location || {},
+      behavioral_data: authData.behavioralData || {},
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  async registerHardwareToken(tokenData: {
+    userId: string
+    challengeResponse: any
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/register-hardware-token', {
+      user_id: tokenData.userId,
+      challenge_response: tokenData.challengeResponse,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  async authenticateWithHardwareToken(tokenData: {
+    userId: string
+    challengeResponse: any
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/authenticate-hardware-token', {
+      user_id: tokenData.userId,
+      challenge_response: tokenData.challengeResponse,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  async enrollBiometric(biometricData: {
+    userId: string
+    biometricType: string
+    biometricData: string // base64 encoded
+    qualityScore?: number
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/enroll-biometric', {
+      user_id: biometricData.userId,
+      biometric_type: biometricData.biometricType,
+      biometric_data: biometricData.biometricData,
+      quality_score: biometricData.qualityScore || 0.8,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  async verifyBiometric(biometricData: {
+    userId: string
+    biometricType: string
+    biometricData: string // base64 encoded
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/verify-biometric', {
+      user_id: biometricData.userId,
+      biometric_type: biometricData.biometricType,
+      biometric_data: biometricData.biometricData,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  async generateSecureCredentials(credentialData: {
+    userId: string
+    includePassword?: boolean
+    includeRecoveryCodes?: boolean
+    passwordLength?: number
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/generate-secure-credentials', {
+      user_id: credentialData.userId,
+      include_password: credentialData.includePassword !== false,
+      include_recovery_codes: credentialData.includeRecoveryCodes !== false,
+      password_length: credentialData.passwordLength || 21,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  async assessAuthenticationRisk(riskData: {
+    userId?: string
+    sessionId?: string
+    ipAddress?: string
+    userAgent?: string
+    deviceFingerprint?: string
+    location?: any
+    behavioralData?: any
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/assess-risk', {
+      user_id: riskData.userId,
+      session_id: riskData.sessionId,
+      ip_address: riskData.ipAddress || 'unknown',
+      user_agent: riskData.userAgent || navigator.userAgent,
+      device_fingerprint: riskData.deviceFingerprint || this.generateDeviceFingerprint(),
+      location: riskData.location || {},
+      behavioral_data: riskData.behavioralData || {},
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  async validateSessionSecurity(sessionData: {
+    sessionId: string
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/validate-session-security', {
+      session_id: sessionData.sessionId,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  /**
+   * WebAuthn/FIDO2 Support Methods
+   */
+  async generateWebAuthnChallenge(userId: string): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/webauthn-challenge', {
+      user_id: userId,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  async verifyWebAuthnResponse(challengeData: {
+    userId: string
+    challengeId: string
+    response: any
+  }): Promise<WorkflowResponse> {
+    return this.callWorkflow('/auth/webauthn-verify', {
+      user_id: challengeData.userId,
+      challenge_id: challengeData.challengeId,
+      response: challengeData.response,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  /**
+   * Utility Methods
+   */
+  private generateDeviceFingerprint(): string {
+    // Generate a basic device fingerprint
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    ctx?.fillText(navigator.userAgent, 10, 10)
+    
+    const fingerprint = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      !!window.sessionStorage,
+      !!window.localStorage,
+      !!window.indexedDB,
+      canvas.toDataURL()
+    ].join('|')
+    
+    // Simple hash for the fingerprint
+    let hash = 0
+    for (let i = 0; i < fingerprint.length; i++) {
+      const char = fingerprint.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32-bit integer
+    }
+    
+    return Math.abs(hash).toString(36)
+  }
+
+  /**
    * Document Processing Workflows
    */
   async uploadDocument(documentData: {
