@@ -48,7 +48,6 @@
     "forceConsistentCasingInFileNames": true,
     
     /* Path mapping */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],
@@ -56,7 +55,8 @@
       "@/types/*": ["./src/types/*"],
       "@/hooks/*": ["./src/hooks/*"],
       "@/lib/*": ["./src/lib/*"],
-      "@/assets/*": ["./src/assets/*"]
+      "@/assets/*": ["./src/assets/*"],
+      "*": ["./*"]
     },
     
     /* Emit configuration */

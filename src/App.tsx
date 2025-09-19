@@ -160,6 +160,7 @@ function App() {
             onUpdateEvent={(updatedEvent) => setEvents(current => 
               (current || []).map(event => event.id === updatedEvent.id ? updatedEvent : event)
             )}
+            userProfile={userProfile}
           />
         ) : (
           <Card>
