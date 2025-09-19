@@ -1,11 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useKV } from '@github/spark/hooks'
+import { useTelemetry } from './services/telemetry'
+import { initializeSampleData } from './data/sampleData'
 import { Header } from './components/Header'
 import { EventCard } from './components/EventCard'
 import { ProfileSetup } from './components/ProfileSetup'
 import { OrganizationDashboard } from './components/OrganizationDashboard'
 import { ImpactTracker } from './components/ImpactTracker'
 import { SecurityDashboard } from './components/SecurityDashboard'
+import { SignupFlow } from './components/SignupFlow'
+import { QRVerificationSystem } from './components/QRVerificationSystem'
+import { TelemetryDashboard } from './components/TelemetryDashboard'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
 import { Badge } from './components/ui/badge'
@@ -30,21 +35,50 @@ export interface UserProfile {
   id: string
   name: string
   email: string
-  skills: string[]
-  interests: string[]
+  userType: 'individual' | 'organization' | 'business'
+  skills?: string[]
+  interests?: string[]
   verified: boolean
+  verificationStatus: 'pending' | 'in_progress' | 'verified' | 'rejected' | 'suspended'
   hoursLogged: number
   eventsAttended: number
   isOrganization: boolean
+  securityScore: number
+  flagged: boolean
+  createdAt: string
+  profile?: any
+  verification?: any
+  permissions?: any
 }
 
 function App() {
   const [userProfile, setUserProfile] = useKV<UserProfile | null>('user-profile', null)
-  const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security'>('events')
+  const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry'>('events')
   const [events, setEvents] = useKV<VolunteerEvent[]>('volunteer-events', [])
   const [registrations, setRegistrations] = useKV<{[eventId: string]: boolean}>('user-registrations', {})
+  
+  const { trackUserAction, trackPageView, setUserId } = useTelemetry()
+
+  // Initialize sample data on first load
+  useEffect(() => {
+    initializeSampleData()
+  }, [])
+
+  // Track user identification and page views
+  useEffect(() => {
+    if (userProfile) {
+      setUserId(userProfile.id)
+      trackUserAction('user_profile_loaded', 'authentication', userProfile.userType)
+    }
+  }, [userProfile, setUserId, trackUserAction])
+
+  useEffect(() => {
+    trackPageView(currentView)
+  }, [currentView, trackPageView])
 
   const handleRegisterForEvent = (eventId: string) => {
+    trackUserAction('event_registration', 'events', `event_${eventId}`)
+    
     setRegistrations(current => ({
       ...(current || {}),
       [eventId]: true
@@ -60,6 +94,8 @@ function App() {
   }
 
   const handleUnregisterFromEvent = (eventId: string) => {
+    trackUserAction('event_unregistration', 'events', `event_${eventId}`)
+    
     setRegistrations(current => {
       const updated = { ...(current || {}) }
       delete updated[eventId]
@@ -77,7 +113,7 @@ function App() {
 
   const renderContent = () => {
     if (!userProfile) {
-      return <ProfileSetup onProfileCreated={setUserProfile} />
+      return <SignupFlow onSignupComplete={setUserProfile} />
     }
 
     switch (currentView) {
@@ -144,7 +180,7 @@ function App() {
                   <div>
                     <p className="text-sm font-medium mb-2">Skills</p>
                     <div className="flex flex-wrap gap-1">
-                      {userProfile.skills.map(skill => (
+                      {(userProfile.skills || []).map(skill => (
                         <Badge key={skill} variant="secondary">{skill}</Badge>
                       ))}
                     </div>
@@ -152,7 +188,7 @@ function App() {
                   <div>
                     <p className="text-sm font-medium mb-2">Interests</p>
                     <div className="flex flex-wrap gap-1">
-                      {userProfile.interests.map(interest => (
+                      {(userProfile.interests || []).map(interest => (
                         <Badge key={interest} variant="outline">{interest}</Badge>
                       ))}
                     </div>
@@ -214,7 +250,13 @@ function App() {
         return <ImpactTracker events={events || []} registrations={registrations || {}} />
 
       case 'security':
-        return <SecurityDashboard />
+        return <SecurityDashboard userProfile={userProfile} />
+
+      case 'verification':
+        return <QRVerificationSystem userProfile={userProfile} />
+
+      case 'telemetry':
+        return <TelemetryDashboard />
 
       default:
         return null

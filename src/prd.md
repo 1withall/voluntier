@@ -2,161 +2,138 @@
 
 ## Core Purpose & Success
 
-**Mission Statement**: Create a fully autonomous, agent-driven platform that coordinates volunteer activities, facilitates community engagement, and manages local resources with precision while maintaining human oversight for critical decisions.
+**Mission Statement**: Voluntier creates a secure, autonomous community platform that connects verified individuals, organizations, and businesses to coordinate volunteer activities, share resources, and strengthen local communities through rigorous verification and gamified engagement.
 
-**Success Indicators**: 
-- Autonomous operation with 99.9% uptime through agentic control
-- Community engagement metrics showing sustained volunteer participation
-- Successful coordination of volunteer events with minimal human intervention
-- Security compliance with zero tolerance for data breaches
+**Success Indicators**:
+- 90%+ user verification completion rate within 30 days
+- Zero security incidents through AI-driven monitoring
+- 80%+ monthly active user retention
+- Measurable increase in community volunteer participation
 
-**Experience Qualities**: Trustworthy, Autonomous, Community-focused
+**Experience Qualities**: Trustworthy, Secure, Community-Driven
 
 ## Project Classification & Approach
 
-**Complexity Level**: Complex Application (advanced functionality, autonomous agents, multi-database architecture)
+**Complexity Level**: Complex Application (advanced functionality, accounts, verification systems)
 
-**Primary User Activity**: Interacting (community members coordinating volunteer activities) with autonomous backend orchestration
+**Primary User Activity**: Creating (community connections), Acting (volunteering), Interacting (coordination)
 
 ## Thought Process for Feature Selection
 
-**Core Problem Analysis**: Communities lack effective coordination mechanisms for volunteer activities, resource sharing, and event management, requiring autonomous systems to maintain continuity.
+**Core Problem Analysis**: Communities lack a trusted, secure platform to coordinate volunteer activities while ensuring participant safety and authenticity.
 
-**User Context**: Community members, organizations, and local businesses need a reliable platform that operates independently while providing transparency and accountability.
+**User Context**: Users need confidence in the platform's security and the authenticity of other participants before engaging in community activities.
 
-**Critical Path**: User registration → Profile verification → Event discovery → Volunteer coordination → Impact tracking, all supported by autonomous backend operations.
+**Critical Path**: Account Creation → Identity Verification → Community Participation → Ongoing Security Monitoring
 
-**Key Moments**: 
-1. Multi-factor account verification with in-person validation
-2. AI-agent coordination of volunteer matching and event optimization
-3. Autonomous threat detection and security response
+**Key Moments**:
+1. Initial signup with tailored forms for each user type
+2. Multi-factor verification including in-person QR code validation
+3. First successful event participation or posting
 
 ## Essential Features
 
-### User-Facing Features
-- **Multi-factor Profile Verification**: In-person validation by trusted community members ensures security and accountability
-- **Event Discovery & Registration**: Browse and register for volunteer opportunities with skill-based matching
-- **Gamified Participation**: Reward structures and achievement systems to encourage sustained engagement
-- **Impact Tracking**: Real-time visibility into community contributions and outcomes
-- **Organization Management**: Tools for non-profits and businesses to coordinate volunteer activities
+### User Type-Specific Signup Forms
+- **Individual Form**: Personal details, skills, interests, references, emergency contact
+- **Organization Form**: Official registration, mission, services, leadership verification
+- **Business Form**: Business registration, community contribution plans, corporate social responsibility goals
 
-### Backend Autonomous Systems
-- **Agentic Control Layer**: Autonomous management of operations, codebase maintenance, and administrative tasks
-- **Temporal Workflow Orchestration**: Deterministic scheduling, optimization, and maintenance workflows
-- **Hybrid Memory System**: Neo4j + FAISS for dynamic relationship mapping and contextual decision-making
-- **AI/ML Security Suite**: Real-time threat detection, vulnerability assessment, and automated response
-- **Multi-Database Architecture**: Separate databases for user data, Temporal workflows, and memory systems
+### Comprehensive Verification System
+- Personal reference validation for individuals
+- In-person QR code verification by registered organizations
+- Document verification for organizations and businesses
+- Continuous security monitoring and re-verification triggers
+
+### Security & Monitoring
+- AI-driven threat detection and prevention
+- Automated vulnerability assessment
+- Comprehensive audit logging
+- Real-time anomaly detection
 
 ## Design Direction
 
 ### Visual Tone & Identity
-**Emotional Response**: Users should feel confident in the platform's reliability and security while experiencing warmth from community connection.
-
-**Design Personality**: Professional yet approachable, emphasizing trust, transparency, and community values.
-
-**Visual Metaphors**: Interconnected networks, growing communities, helping hands, and shield/security symbols.
-
-**Simplicity Spectrum**: Clean, minimal interface that doesn't overwhelm users while conveying the sophisticated backend capabilities.
+**Emotional Response**: Users should feel secure, confident, and welcomed into a trusted community.
+**Design Personality**: Professional yet approachable, emphasizing trust and security.
+**Visual Metaphors**: Shield iconography for security, interconnected nodes for community, checkmarks for verification.
+**Simplicity Spectrum**: Clean, minimal interface that doesn't overwhelm but clearly communicates security and verification status.
 
 ### Color Strategy
-**Color Scheme Type**: Complementary with professional blue-based primary and warm accent colors
-
-**Primary Color**: Deep blue (oklch(0.6 0.15 240)) - conveying trust, reliability, and security
-**Secondary Colors**: Light grays and off-whites for backgrounds and supporting elements
-**Accent Color**: Warm yellow-orange (oklch(0.65 0.18 60)) - highlighting CTAs and achievements
-**Success Color**: Forest green (oklch(0.7 0.12 150)) - for positive actions and confirmations
-**Destructive Color**: Warm red (oklch(0.65 0.2 25)) - for warnings and critical actions
-
-**Color Psychology**: Blue builds trust essential for security-focused platform, warm accents create community feeling
-**Color Accessibility**: All pairings meet WCAG AA standards with 4.5:1+ contrast ratios
+**Color Scheme Type**: Complementary (blue/orange) with neutral grays
+**Primary Color**: Deep blue (#2563eb) - conveys trust, security, and professionalism
+**Secondary Colors**: Warm gray (#6b7280) for supporting elements
+**Accent Color**: Vibrant orange (#ea580c) for CTAs and important status indicators
+**Color Psychology**: Blue builds trust and confidence, orange creates urgency and draws attention to important actions
+**Color Accessibility**: All combinations meet WCAG AA standards (4.5:1 contrast ratio)
 
 ### Typography System
-**Font Pairing Strategy**: Single font family (Inter) with varied weights for consistency and professionalism
-**Typographic Hierarchy**: Clear distinction between headers (700), subheads (600), body (400), and captions (400)
-**Font Personality**: Inter conveys modern professionalism while remaining highly legible
-**Which fonts**: Inter from Google Fonts - excellent legibility across all devices and screen sizes
+**Font Pairing Strategy**: Inter for both headings and body text to maintain consistency and readability
+**Typographic Hierarchy**: Clear distinction between form labels, input text, help text, and error messages
+**Font Personality**: Clean, modern, highly legible - emphasizing clarity and accessibility
+**Readability Focus**: Generous line spacing, appropriate font sizes for form accessibility
+**Which fonts**: Inter (already imported)
+**Legibility Check**: Inter is highly optimized for screen reading and accessibility
 
 ### Visual Hierarchy & Layout
-**Attention Direction**: Primary actions use accent colors, secondary actions use muted tones
-**White Space Philosophy**: Generous spacing creates calm, trustworthy feeling appropriate for community platform
-**Grid System**: Responsive grid with consistent 24px base unit for predictable layouts
-**Content Density**: Balanced approach - enough information without overwhelming users
+**Attention Direction**: Form validation states and security badges guide user focus
+**White Space Philosophy**: Generous spacing around form elements to reduce cognitive load
+**Grid System**: Consistent 8px grid for form alignment and spacing
+**Responsive Approach**: Single-column forms on mobile, multi-column layouts on desktop
+**Content Density**: Balanced information gathering without overwhelming users
 
 ### Animations
-**Purposeful Meaning**: Subtle animations reinforce security (smooth transitions) and community connection (gentle hover states)
-**Hierarchy of Movement**: Critical actions get priority, background operations remain invisible
-**Contextual Appropriateness**: Professional, subtle animations that don't distract from serious community work
+**Purposeful Meaning**: Subtle animations for form validation feedback and loading states
+**Hierarchy of Movement**: Validation indicators and security status changes receive animation priority
+**Contextual Appropriateness**: Minimal, professional animations that reinforce security and progress
 
 ### UI Elements & Component Selection
-**Component Usage**: shadcn/ui components provide consistent, accessible foundation
-**Component Customization**: Minimal customization to maintain reliability and consistency
-**Icon Selection**: Phosphor icons for clear, professional iconography
-**Spacing System**: Tailwind's spacing scale ensures mathematical consistency
+**Component Usage**: 
+- Forms: Input fields, selects, textareas with validation states
+- Cards: For form sections and verification status
+- Badges: For verification levels and user types
+- Dialogs: For verification workflows and security confirmations
+- Progress indicators: For multi-step verification process
+
+**Component Customization**: Enhanced focus states for accessibility, security-themed styling
+**Component States**: Clear valid/invalid/pending states for all form elements
+**Icon Selection**: Shield, check, alert, user icons for clear status communication
+**Spacing System**: Consistent use of Tailwind's spacing scale (4, 6, 8 spacing units)
 
 ### Accessibility & Readability
-**Contrast Goal**: WCAG AA compliance minimum, with many elements exceeding AAA standards
-**Additional Requirements**: Full keyboard navigation, screen reader optimization, high-contrast mode support
-
-## Architecture Considerations
-
-### Backend Systems (Not User-Facing)
-**Agentic Control Layer**: 
-- Autonomous codebase management and deployment
-- Real-time operational monitoring and optimization
-- Human-in-the-loop triggers for critical decisions
-
-**Temporal Workflows**:
-- Deterministic task scheduling and execution
-- Maintenance and optimization routines
-- Event coordination and resource allocation
-
-**Hybrid Memory System**:
-- Neo4j for relationship mapping and community network analysis
-- FAISS for efficient similarity search and matching
-- Real-time context preservation across agent workflows
-
-**Security Infrastructure**:
-- AI/ML-enhanced threat detection and response
-- Adaptive Blue Team strategies
-- Continuous vulnerability assessment
-- Encrypted data handling and audit logging
-
-### Database Architecture
-- **User Database**: PostgreSQL for user profiles, events, registrations
-- **Temporal Database**: Separate persistence for workflow state and history
-- **Memory System Database**: Neo4j for graphs, FAISS indices for vectors
-- **Security Database**: Audit logs, threat intelligence, security metrics
-
-### Human Oversight Integration
-- Critical security decisions require human approval
-- LLM output validation failures escalate to human review
-- Database migrations and configuration changes need manual authorization
-- Emergency override capabilities for agent shutdown
+**Contrast Goal**: WCAG AA compliance minimum, aiming for AAA where possible
+- Form labels: High contrast black on white
+- Error messages: Red with sufficient contrast
+- Success indicators: Green with high contrast
+- All interactive elements meet minimum 44px touch targets
 
 ## Edge Cases & Problem Scenarios
 
-**Potential Obstacles**: 
-- Agent failures requiring human intervention
-- Security threats requiring immediate response
-- Community disputes needing human mediation
-- Technical failures in autonomous systems
+**Potential Obstacles**:
+- Users abandoning verification process due to complexity
+- False positives in security monitoring
+- Reference verification delays
+- QR code scanning technical issues
 
-**Edge Case Handling**: 
-- Robust fallback mechanisms with human notification
-- Graceful degradation maintaining core functionality
-- Emergency protocols for agent system failures
+**Edge Case Handling**:
+- Progressive verification with clear progress indicators
+- Human oversight for security alerts
+- Automated reminders for pending verifications
+- Fallback verification methods
+
+**Technical Constraints**:
+- Real-world deployment requires robust offline capabilities
+- Multiple verification touchpoints increase complexity
+- Integration with external verification systems
 
 ## Implementation Considerations
 
-**Scalability Needs**: Modular architecture supporting community growth and feature expansion
-**Testing Focus**: Comprehensive testing of autonomous systems, security protocols, and human handoff procedures
+**Scalability Needs**: Support for growing user base, verification queue management
+**Testing Focus**: Security vulnerability testing, accessibility compliance, verification workflow validation
 **Critical Questions**: 
-- How do we balance autonomous operation with necessary human oversight?
-- What are the failure modes for each autonomous system component?
-- How do we ensure security without sacrificing usability?
+- How to balance security with user experience?
+- What verification methods provide optimal trust while remaining accessible?
+- How to handle verification disputes and appeals?
 
 ## Reflection
 
-This approach uniquely combines autonomous operation with community-focused design, ensuring the platform can operate independently while maintaining the human trust essential for volunteer coordination. The clear separation between user-facing features and backend autonomous systems allows for sophisticated AI-driven optimization without overwhelming users with complexity.
-
-The emphasis on security-by-design and human-in-the-loop safeguards addresses the critical trust requirements for a platform handling community coordination and personal data.
+This approach uniquely addresses community trust through technical security measures combined with human verification touchpoints. The assumption that users will accept rigorous verification in exchange for community safety should be validated through user testing. What makes this exceptional is the combination of AI-driven security with human relationship-based verification, creating a hybrid trust model that scales while maintaining personal accountability.

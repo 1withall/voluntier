@@ -56,12 +56,17 @@ export function ProfileSetup({ onProfileCreated }: ProfileSetupProps) {
       id: Date.now().toString(),
       name,
       email,
+      userType: 'individual',
       skills: selectedSkills,
       interests: selectedInterests,
       verified: false,
+      verificationStatus: 'pending',
       hoursLogged: 0,
       eventsAttended: 0,
-      isOrganization
+      isOrganization,
+      securityScore: 0,
+      flagged: false,
+      createdAt: new Date().toISOString()
     }
 
     onProfileCreated(profile)

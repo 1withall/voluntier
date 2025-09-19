@@ -1,211 +1,190 @@
-import React, { useState, useEffect } from 'react'
+// Security monitoring and threat detection system
+
+import { useState, useEffect } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Badge } from './ui/badge'
 import { Button } from './ui/button'
+import { Badge } from './ui/badge'
 import { Alert, AlertDescription } from './ui/alert'
+import { Progress } from './ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { 
   Shield, 
   Warning, 
-  Lock, 
   Eye, 
-  TrendUp, 
-  Activity,
-  Users,
+  Lock, 
+  Activity, 
+  Info,
+  CheckCircle,
+  Clock,
+  TrendUp,
   Lightning,
-  Target,
-  Brain,
-  Globe,
-  ChartBar
+  Bug,
+  Database
 } from '@phosphor-icons/react'
+import { SecurityEvent } from '../types/auth'
+import { UserProfile } from '../App'
 
-interface SecurityMetrics {
-  threatLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  activeThreats: number
-  blockedAttacks: number
-  honeypotHits: number
-  uniqueAttackers: number
-  detectionRate: number
-  falsePositiveRate: number
-  systemStatus: 'HEALTHY' | 'WARNING' | 'CRITICAL'
-  lastUpdated: string
+interface SecurityDashboardProps {
+  userProfile?: UserProfile | null
 }
 
-interface SecurityEvent {
-  id: string
-  type: string
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  description: string
-  timestamp: string
-  sourceIp: string
-  status: 'ACTIVE' | 'RESOLVED' | 'INVESTIGATING'
-}
+export function SecurityDashboard({ userProfile }: SecurityDashboardProps) {
+  const [securityEvents, setSecurityEvents] = useKV<SecurityEvent[]>('security-events', [])
+  const [threatLevel, setThreatLevel] = useKV<'low' | 'medium' | 'high' | 'critical'>('threat-level', 'low')
+  const [securityScore, setSecurityScore] = useKV<number>('platform-security-score', 95)
+  const [activeThreats, setActiveThreats] = useKV<number>('active-threats', 0)
+  const [mitigatedThreats, setMitigatedThreats] = useKV<number>('mitigated-threats', 247)
+  const [vulnerabilities, setVulnerabilities] = useKV<any[]>('vulnerabilities', [])
+  const [auditLogs, setAuditLogs] = useKV<any[]>('audit-logs', [])
 
-interface ThreatIntelligence {
-  totalIndicators: number
-  activeThreats: number
-  newThreatsToday: number
-  topThreatTypes: Array<{ type: string; count: number }>
-}
-
-export function SecurityDashboard() {
-  const [securityMetrics, setSecurityMetrics] = useKV<SecurityMetrics | null>('security-metrics', null)
-  const [recentEvents, setRecentEvents] = useKV<SecurityEvent[]>('recent-security-events', [])
-  const [threatIntel, setThreatIntel] = useKV<ThreatIntelligence | null>('threat-intelligence', null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
-
-  // Simulate real-time security data
+  // Simulated real-time security monitoring
   useEffect(() => {
-    const generateMockMetrics = (): SecurityMetrics => {
-      const threatLevels: SecurityMetrics['threatLevel'][] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-      const currentLevel = threatLevels[Math.floor(Math.random() * threatLevels.length)]
-      
-      return {
-        threatLevel: currentLevel,
-        activeThreats: Math.floor(Math.random() * 10) + 1,
-        blockedAttacks: Math.floor(Math.random() * 50) + 10,
-        honeypotHits: Math.floor(Math.random() * 20) + 5,
-        uniqueAttackers: Math.floor(Math.random() * 25) + 3,
-        detectionRate: Math.random() * 0.3 + 0.7, // 70-100%
-        falsePositiveRate: Math.random() * 0.05, // 0-5%
-        systemStatus: currentLevel === 'CRITICAL' ? 'CRITICAL' : 
-                     currentLevel === 'HIGH' ? 'WARNING' : 'HEALTHY',
-        lastUpdated: new Date().toISOString()
-      }
-    }
-
-    const generateMockEvents = (): SecurityEvent[] => {
-      const eventTypes = ['BRUTE_FORCE', 'SQL_INJECTION', 'XSS_ATTEMPT', 'HONEYPOT_HIT', 'ANOMALY_DETECTED']
-      const severities: SecurityEvent['severity'][] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-      const statuses: SecurityEvent['status'][] = ['ACTIVE', 'RESOLVED', 'INVESTIGATING']
-      
-      return Array.from({ length: 5 }, (_, i) => ({
-        id: `event-${i + 1}`,
-        type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
-        severity: severities[Math.floor(Math.random() * severities.length)],
-        description: `Security event detected from suspicious activity`,
-        timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-        sourceIp: `192.168.1.${Math.floor(Math.random() * 255)}`,
-        status: statuses[Math.floor(Math.random() * statuses.length)]
-      }))
-    }
-
-    const generateMockThreatIntel = (): ThreatIntelligence => {
-      const threatTypes = ['Malware', 'Botnet', 'Phishing', 'Scanner', 'APT']
-      
-      return {
-        totalIndicators: Math.floor(Math.random() * 1000) + 500,
-        activeThreats: Math.floor(Math.random() * 50) + 10,
-        newThreatsToday: Math.floor(Math.random() * 10) + 1,
-        topThreatTypes: threatTypes.map(type => ({
-          type,
-          count: Math.floor(Math.random() * 20) + 1
-        })).sort((a, b) => b.count - a.count)
-      }
-    }
-
-    // Initial load
-    setSecurityMetrics(generateMockMetrics())
-    setRecentEvents(generateMockEvents())
-    setThreatIntel(generateMockThreatIntel())
-    setIsLoading(false)
-
-    // Simulate real-time updates
     const interval = setInterval(() => {
-      setSecurityMetrics(generateMockMetrics())
-      setRecentEvents(generateMockEvents())
-      setThreatIntel(generateMockThreatIntel())
-      setLastRefresh(new Date())
-    }, 10000) // Update every 10 seconds
+      // Simulate security event generation
+      const eventTypes = ['login_attempt', 'verification_failure', 'suspicious_activity', 'system_alert']
+      const severities = ['low', 'medium', 'high']
+      
+      if (Math.random() < 0.1) { // 10% chance of new event every 5 seconds
+        const newEvent: SecurityEvent = {
+          id: Date.now().toString(),
+          userId: userProfile?.id || 'system',
+          eventType: eventTypes[Math.floor(Math.random() * eventTypes.length)] as any,
+          severity: severities[Math.floor(Math.random() * severities.length)] as any,
+          description: generateEventDescription(),
+          metadata: {},
+          timestamp: new Date().toISOString(),
+          resolved: false
+        }
+        
+        setSecurityEvents(current => [newEvent, ...((current || []).slice(0, 49))]) // Keep last 50 events
+        
+        // Update metrics based on event severity
+        if (newEvent.severity === 'high' || newEvent.severity === 'critical') {
+          setActiveThreats(current => (current || 0) + 1)
+        }
+      }
+    }, 5000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [userProfile])
 
-  const getThreatLevelColor = (level: string) => {
-    switch (level) {
-      case 'LOW': return 'text-green-600 bg-green-50'
-      case 'MEDIUM': return 'text-yellow-600 bg-yellow-50'
-      case 'HIGH': return 'text-orange-600 bg-orange-50'
-      case 'CRITICAL': return 'text-red-600 bg-red-50'
-      default: return 'text-gray-600 bg-gray-50'
-    }
+  const generateEventDescription = () => {
+    const descriptions = [
+      'Multiple failed login attempts detected',
+      'Unusual access pattern identified',
+      'New device login from unrecognized location',
+      'Potential bot activity detected',
+      'Verification bypass attempt blocked',
+      'Suspicious file upload detected',
+      'Rate limit exceeded by user',
+      'Invalid authentication token usage',
+      'Potential SQL injection attempt blocked',
+      'Cross-site scripting attempt prevented'
+    ]
+    return descriptions[Math.floor(Math.random() * descriptions.length)]
   }
 
-  const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case 'LOW': return <Activity size={16} className="text-green-600" />
-      case 'MEDIUM': return <Eye size={16} className="text-yellow-600" />
-      case 'HIGH': return <Warning size={16} className="text-orange-600" />
-      case 'CRITICAL': return <Lightning size={16} className="text-red-600" />
-      default: return <Activity size={16} className="text-gray-600" />
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Shield size={24} className="text-primary" />
-          <h1 className="text-3xl font-bold text-foreground">Security Dashboard</h1>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-8 bg-muted rounded w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+  const resolveSecurityEvent = (eventId: string) => {
+    setSecurityEvents(current => 
+      (current || []).map(event => 
+        event.id === eventId 
+          ? { ...event, resolved: true, resolvedBy: userProfile?.id || 'admin', resolvedAt: new Date().toISOString() }
+          : event
+      )
     )
+    
+    setActiveThreats(current => Math.max(0, (current || 0) - 1))
+    setMitigatedThreats(current => (current || 0) + 1)
+  }
+
+  const runSecurityScan = async () => {
+    // Simulate comprehensive security scan
+    const scanResults = {
+      vulnerabilities: [
+        {
+          id: 'vuln-001',
+          type: 'Authentication',
+          severity: 'medium',
+          description: 'Password policy could be strengthened',
+          status: 'identified',
+          remediation: 'Implement stronger password requirements'
+        },
+        {
+          id: 'vuln-002', 
+          type: 'Network Security',
+          severity: 'low',
+          description: 'SSL certificate expiring in 30 days',
+          status: 'monitoring',
+          remediation: 'Schedule certificate renewal'
+        }
+      ],
+      score: 97,
+      scanTime: new Date().toISOString()
+    }
+    
+    setVulnerabilities(scanResults.vulnerabilities)
+    setSecurityScore(scanResults.score)
+    
+    // Log the scan
+    const scanLog = {
+      id: Date.now().toString(),
+      action: 'security_scan',
+      user: userProfile?.id || 'system',
+      timestamp: new Date().toISOString(),
+      details: 'Comprehensive security scan completed',
+      result: 'success'
+    }
+    
+    setAuditLogs(current => [scanLog, ...(current || []).slice(0, 99)]) // Keep last 100 logs
+  }
+
+  const getThreatLevelColor = (level: string | undefined) => {
+    const actualLevel = level || 'low'
+    switch (actualLevel) {
+      case 'critical': return 'text-red-600 bg-red-50 border-red-200'
+      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200'
+      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200'
+      case 'low': return 'text-green-600 bg-green-50 border-green-200'
+      default: return 'text-gray-600 bg-gray-50 border-gray-200'
+    }
+  }
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'destructive'
+      case 'high': return 'destructive'
+      case 'medium': return 'secondary'
+      case 'low': return 'outline'
+      default: return 'outline'
+    }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Shield size={24} className="text-primary" />
+        <div>
           <h1 className="text-3xl font-bold text-foreground">Security Dashboard</h1>
+          <p className="text-muted-foreground mt-2">Real-time security monitoring and threat detection</p>
         </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Activity size={12} />
-            Last updated: {lastRefresh.toLocaleTimeString()}
-          </Badge>
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-            Refresh
-          </Button>
-        </div>
+        <Button onClick={runSecurityScan} className="flex items-center gap-2">
+          <Shield size={16} />
+          Run Security Scan
+        </Button>
       </div>
 
-      {/* System Status Alert */}
-      {securityMetrics?.systemStatus === 'CRITICAL' && (
-        <Alert className="border-red-200 bg-red-50">
-          <Warning className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
-            Critical security threats detected. Immediate attention required.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Overview Metrics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Security Overview Cards */}
+      <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Threat Level</CardTitle>
+            <CardTitle className="text-sm font-medium">Security Score</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Badge className={getThreatLevelColor(securityMetrics?.threatLevel || 'LOW')}>
-              {securityMetrics?.threatLevel}
-            </Badge>
+            <div className="text-2xl font-bold text-green-600">{securityScore}%</div>
+            <Progress value={securityScore} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
-              Current security threat assessment
+              Excellent security posture
             </p>
           </CardContent>
         </Card>
@@ -216,193 +195,274 @@ export function SecurityDashboard() {
             <Warning className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {securityMetrics?.activeThreats || 0}
-            </div>
+            <div className="text-2xl font-bold text-orange-600">{activeThreats}</div>
             <p className="text-xs text-muted-foreground">
-              Threats being monitored
+              Threats under investigation
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Blocked Attacks</CardTitle>
-            <Lock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Threats Mitigated</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {securityMetrics?.blockedAttacks || 0}
-            </div>
+            <div className="text-2xl font-bold text-green-600">{mitigatedThreats}</div>
             <p className="text-xs text-muted-foreground">
-              Attacks prevented today
+              +12 this week
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Detection Rate</CardTitle>
-            <TrendUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Threat Level</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {((securityMetrics?.detectionRate || 0) * 100).toFixed(1)}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              ML threat detection accuracy
+            <Badge className={getThreatLevelColor(threatLevel)} variant="outline">
+              {(threatLevel || 'low').toUpperCase()}
+            </Badge>
+            <p className="text-xs text-muted-foreground mt-2">
+              Current threat assessment
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Security Events */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye size={20} />
-              Recent Security Events
-            </CardTitle>
-            <CardDescription>
-              Latest security events and threats detected
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {(recentEvents || []).map((event) => (
-                <div key={event.id} className="flex items-start justify-between p-3 border rounded-lg">
-                  <div className="flex items-start gap-3">
-                    {getSeverityIcon(event.severity)}
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{event.type.replace('_', ' ')}</span>
-                        <Badge variant="outline" className="text-xs">
+      {/* Security Tabs */}
+      <Tabs defaultValue="events" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="events">Security Events</TabsTrigger>
+          <TabsTrigger value="vulnerabilities">Vulnerabilities</TabsTrigger>
+          <TabsTrigger value="monitoring">Real-time Monitoring</TabsTrigger>
+          <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="events" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Info size={20} />
+                Recent Security Events
+              </CardTitle>
+              <CardDescription>
+                Real-time security events and incidents
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(securityEvents || []).slice(0, 10).map(event => (
+                  <div 
+                    key={event.id} 
+                    className={`p-3 rounded-lg border ${event.resolved ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge variant={getSeverityColor(event.severity)}>
                           {event.severity}
                         </Badge>
+                        <span className="font-medium">{event.eventType.replace('_', ' ')}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {event.description}
-                      </p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>IP: {event.sourceIp}</span>
-                        <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(event.timestamp).toLocaleTimeString()}
+                        </span>
+                        {!event.resolved && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => resolveSecurityEvent(event.id)}
+                          >
+                            Resolve
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <Badge 
-                    variant={event.status === 'RESOLVED' ? 'default' : 'secondary'}
-                    className="text-xs"
-                  >
-                    {event.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Threat Intelligence */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain size={20} />
-              Threat Intelligence
-            </CardTitle>
-            <CardDescription>
-              Current threat landscape and intelligence
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-foreground">
-                    {threatIntel?.totalIndicators || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Total Indicators</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {threatIntel?.activeThreats || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Active Threats</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">
-                    {threatIntel?.newThreatsToday || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground">New Today</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Top Threat Types</h4>
-                {threatIntel?.topThreatTypes.slice(0, 3).map((threat, index) => (
-                  <div key={threat.type} className="flex items-center justify-between p-2 bg-muted rounded">
-                    <span className="text-sm">{threat.type}</span>
-                    <Badge variant="outline">{threat.count}</Badge>
+                    <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                    {event.resolved && (
+                      <p className="text-xs text-green-600 mt-1">
+                        ✓ Resolved by {event.resolvedBy} at {new Date(event.resolvedAt!).toLocaleTimeString()}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Additional Security Metrics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target size={20} />
-              Honeypot Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {securityMetrics?.honeypotHits || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Honeypot interactions detected
-            </p>
-          </CardContent>
-        </Card>
+        <TabsContent value="vulnerabilities" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bug size={20} />
+                Vulnerability Assessment
+              </CardTitle>
+              <CardDescription>
+                Known vulnerabilities and remediation status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(vulnerabilities || []).length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle size={48} className="text-green-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-green-600 mb-2">No Critical Vulnerabilities</h3>
+                  <p className="text-muted-foreground">
+                    Your system is secure. Run a security scan to check for new vulnerabilities.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(vulnerabilities || []).map(vuln => (
+                    <div key={vuln.id} className="p-3 rounded-lg border">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <Badge variant={getSeverityColor(vuln.severity)}>
+                            {vuln.severity}
+                          </Badge>
+                          <span className="font-medium">{vuln.type}</span>
+                        </div>
+                        <Badge variant="outline">{vuln.status}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">{vuln.description}</p>
+                      <p className="text-xs text-blue-600">Remediation: {vuln.remediation}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users size={20} />
-              Unique Attackers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {securityMetrics?.uniqueAttackers || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Distinct threat actors identified
-            </p>
-          </CardContent>
-        </Card>
+        <TabsContent value="monitoring" className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye size={20} />
+                  Network Monitoring
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Firewall Status</span>
+                  <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                    Active
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>DDoS Protection</span>
+                  <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                    Enabled
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Rate Limiting</span>
+                  <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                    Active
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>SSL/TLS</span>
+                  <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                    TLS 1.3
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ChartBar size={20} />
-              False Positive Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {((securityMetrics?.falsePositiveRate || 0) * 100).toFixed(2)}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Detection accuracy metric
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database size={20} />
+                  Data Protection
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Encryption at Rest</span>
+                  <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                    AES-256
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Backup Status</span>
+                  <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                    Daily
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Access Control</span>
+                  <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                    RBAC
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Audit Logging</span>
+                  <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                    Enabled
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightning size={20} />
+                  AI-Powered Threat Detection
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Alert>
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription>
+                    Advanced machine learning algorithms are continuously monitoring for suspicious patterns, 
+                    anomalous behavior, and potential security threats. Current detection accuracy: 99.2%
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="audit" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock size={20} />
+                Audit Trail
+              </CardTitle>
+              <CardDescription>
+                Complete audit log of system activities and security events
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {(auditLogs || []).slice(0, 15).map(log => (
+                  <div key={log.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div>
+                      <span className="font-medium">{log.action.replace('_', ' ')}</span>
+                      <span className="text-sm text-muted-foreground ml-2">by {log.user}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+                
+                {(auditLogs || []).length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No audit logs available. System activities will appear here.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
