@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useKV } from '@github/spark/hooks'
+import { temporalWorkflowService } from './temporalWorkflowService'
 
 export interface TelemetryEvent {
   id: string
@@ -258,16 +259,42 @@ class TelemetryService {
     this.telemetryQueue = []
 
     try {
-      // In a real implementation, this would send to your analytics backend
-      console.log('📊 Telemetry Batch:', {
-        batchSize: eventsToFlush.length,
-        events: eventsToFlush
-      })
+      // Send events to Temporal workflow for processing
+      const batchPromises = eventsToFlush.map(event => 
+        temporalWorkflowService.trackTelemetryEvent({
+          userId: event.userId,
+          eventType: event.eventType,
+          category: event.category,
+          label: event.label,
+          value: event.value,
+          metadata: {
+            ...event.metadata,
+            sessionId: event.sessionId,
+            severity: event.severity,
+            source: event.source,
+            environment: event.environment,
+            userAgent: event.userAgent,
+            timestamp: event.timestamp,
+            id: event.id
+          }
+        }).catch(error => {
+          console.warn('Failed to send telemetry event to Temporal:', error)
+          return null
+        })
+      )
 
-      // Store locally for demo purposes
+      await Promise.allSettled(batchPromises)
+
+      // Also store locally for immediate access and backup
       const existingEvents = JSON.parse(localStorage.getItem('voluntier_telemetry') || '[]')
       const allEvents = [...existingEvents, ...eventsToFlush].slice(-1000) // Keep last 1000 events
       localStorage.setItem('voluntier_telemetry', JSON.stringify(allEvents))
+
+      console.log('📊 Telemetry Batch Sent:', {
+        batchSize: eventsToFlush.length,
+        temporal: batchPromises.length,
+        localStorage: allEvents.length
+      })
 
     } catch (error) {
       console.error('Failed to flush telemetry:', error)

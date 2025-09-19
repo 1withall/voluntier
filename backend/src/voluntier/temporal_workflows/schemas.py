@@ -213,3 +213,68 @@ class ExecutionResult(BaseModel):
     side_effects: List[str] = Field(default_factory=list, description="Side effects of execution")
     rollback_info: Optional[Dict[str, Any]] = Field(default=None, description="Information for potential rollback")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional execution metadata")
+
+
+class AuthenticationRequest(BaseModel):
+    """Request schema for authentication workflow."""
+    email: str
+    password: str
+    ip_address: str = "unknown"
+    user_agent: str = "unknown"
+    remember_me: bool = False
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class SessionValidationRequest(BaseModel):
+    """Request schema for session validation workflow."""
+    session_token: str
+    ip_address: str = "unknown"
+    check_privileges: bool = False
+    required_privilege: Optional[str] = None
+    required_level: str = "read"
+
+
+class DocumentUploadRequest(BaseModel):
+    """Request schema for document upload workflow."""
+    user_id: str
+    document_type: str
+    filename: str
+    mime_type: str
+    file_data: bytes
+    description: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class BulkDocumentRequest(BaseModel):
+    """Request schema for bulk document processing workflow."""
+    user_id: str
+    documents: List[Dict[str, Any]]
+    processing_options: Dict[str, Any] = Field(default_factory=dict)
+
+
+class PrivilegeCheckRequest(BaseModel):
+    """Request schema for privilege check workflow."""
+    user_id: str
+    privilege: str
+    level: str = "read"
+    resource_id: Optional[str] = None
+    context: Dict[str, Any] = Field(default_factory=dict)
+
+
+class OnboardingProgressRequest(BaseModel):
+    """Request schema for onboarding progress workflow."""
+    user_id: str
+    user_type: str
+    completed_steps: List[str] = Field(default_factory=list)
+    current_step: Optional[str] = None
+
+
+class TelemetryEventRequest(BaseModel):
+    """Request schema for telemetry event workflow."""
+    user_id: Optional[str] = None
+    event_type: str
+    category: str
+    label: Optional[str] = None
+    value: Optional[float] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=datetime.utcnow)

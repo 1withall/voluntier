@@ -11,6 +11,7 @@ import {
   ActiveSession
 } from '../types/privileges'
 import { UserProfile } from '../types/profiles'
+import { temporalWorkflowService } from './temporalWorkflowService'
 
 // Crypto utilities for password hashing
 class AuthCrypto {
@@ -133,8 +134,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (sessionToken && sessionData[sessionToken]) {
           const session = sessionData[sessionToken]
           
-          // Check if session is expired
-          if (new Date(session.expiresAt) > new Date()) {
+          // Validate session through Temporal workflow
+          const validationResult = await temporalWorkflowService.validateSession({
+            sessionToken,
+            ipAddress: 'localhost',
+          })
+          
+          if (validationResult.status === 'success' && validationResult.data.valid) {
             const user = adminUsers.find(u => 
               u.sessionTokens.some(t => t.token === sessionToken)
             )
@@ -143,21 +149,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               setCurrentUser(user)
               setCurrentSession(session)
               
-              // Update last activity only if needed
-              const timeSinceLastActivity = new Date().getTime() - new Date(session.lastActivity).getTime()
-              if (timeSinceLastActivity > 60000) { // Only update if more than 1 minute
-                const updatedSession = {
-                  ...session,
-                  lastActivity: new Date().toISOString()
-                }
-                setSessionData(current => ({
-                  ...current,
-                  [sessionToken]: updatedSession
-                }))
+              // Update last activity
+              const updatedSession = {
+                ...session,
+                lastActivity: new Date().toISOString()
               }
+              setSessionData(current => ({
+                ...current,
+                [sessionToken]: updatedSession
+              }))
             }
           } else {
-            // Clean up expired session
+            // Session invalid - clean up
             localStorage.removeItem('voluntier_session_token')
             setSessionData(current => {
               const updated = { ...current }
@@ -182,85 +185,101 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       setIsLoading(true)
       
+      // For admin users, first check local storage for rapid response
       const user = adminUsers?.find(u => u.email.toLowerCase() === email.toLowerCase())
       
-      if (!user) {
-        return {
-          success: false,
-          error: 'Invalid credentials'
+      if (user) {
+        // Handle admin authentication locally for speed
+        if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+          return {
+            success: false,
+            error: 'Account is temporarily locked due to failed login attempts'
+          }
         }
-      }
 
-      // Check if account is locked
-      if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
-        return {
-          success: false,
-          error: 'Account is temporarily locked due to failed login attempts'
+        const isValidPassword = await AuthCrypto.verifyPassword(password, user.passwordHash, user.salt)
+        
+        if (!isValidPassword) {
+          const updatedUser = {
+            ...user,
+            loginAttempts: user.loginAttempts + 1,
+            lockedUntil: user.loginAttempts >= 4 ? 
+              new Date(Date.now() + 15 * 60 * 1000).toISOString() :
+              undefined
+          }
+          
+          setAdminUsers(current => 
+            current?.map(u => u.id === user.id ? updatedUser : u) || []
+          )
+          
+          return {
+            success: false,
+            error: 'Invalid credentials',
+            remainingAttempts: Math.max(0, 5 - updatedUser.loginAttempts)
+          }
         }
-      }
 
-      // Verify password
-      const isValidPassword = await AuthCrypto.verifyPassword(password, user.passwordHash, user.salt)
-      
-      if (!isValidPassword) {
-        // Increment login attempts
+        // Create session locally for admin
+        const sessionToken = AuthCrypto.generateSessionToken()
+        const session: ActiveSession = {
+          token: sessionToken,
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+          ipAddress: 'localhost',
+          userAgent: navigator.userAgent,
+          lastActivity: new Date().toISOString()
+        }
+
         const updatedUser = {
           ...user,
-          loginAttempts: user.loginAttempts + 1,
-          lockedUntil: user.loginAttempts >= 4 ? 
-            new Date(Date.now() + 15 * 60 * 1000).toISOString() : // Lock for 15 minutes
-            undefined
+          lastLoginAt: new Date().toISOString(),
+          loginAttempts: 0,
+          lockedUntil: undefined,
+          sessionTokens: [...user.sessionTokens.filter(t => new Date(t.expiresAt) > new Date()), session]
         }
-        
+
+        localStorage.setItem('voluntier_session_token', sessionToken)
+        setSessionData(current => ({
+          ...current,
+          [sessionToken]: session
+        }))
+
         setAdminUsers(current => 
           current?.map(u => u.id === user.id ? updatedUser : u) || []
         )
-        
+
+        setCurrentUser(updatedUser)
+        setCurrentSession(session)
+
         return {
-          success: false,
-          error: 'Invalid credentials',
-          remainingAttempts: Math.max(0, 5 - updatedUser.loginAttempts)
+          success: true,
+          user: updatedUser,
+          session
         }
-      }
+      } else {
+        // For regular users, use Temporal workflow
+        const authResult = await temporalWorkflowService.authenticateUser({
+          email,
+          password,
+          ipAddress: 'localhost',
+          userAgent: navigator.userAgent,
+        })
 
-      // Create new session
-      const sessionToken = AuthCrypto.generateSessionToken()
-      const session: ActiveSession = {
-        token: sessionToken,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(), // 8 hours
-        ipAddress: 'localhost', // Would be actual IP in production
-        userAgent: navigator.userAgent,
-        lastActivity: new Date().toISOString()
-      }
-
-      // Update user with successful login
-      const updatedUser = {
-        ...user,
-        lastLoginAt: new Date().toISOString(),
-        loginAttempts: 0,
-        lockedUntil: undefined,
-        sessionTokens: [...user.sessionTokens.filter(t => new Date(t.expiresAt) > new Date()), session]
-      }
-
-      // Store session
-      localStorage.setItem('voluntier_session_token', sessionToken)
-      setSessionData(current => ({
-        ...current,
-        [sessionToken]: session
-      }))
-
-      setAdminUsers(current => 
-        current?.map(u => u.id === user.id ? updatedUser : u) || []
-      )
-
-      setCurrentUser(updatedUser)
-      setCurrentSession(session)
-
-      return {
-        success: true,
-        user: updatedUser,
-        session
+        if (authResult.status === 'success' && authResult.data.authenticated) {
+          // Store session token for regular users
+          localStorage.setItem('voluntier_session_token', authResult.data.session.session_token)
+          
+          return {
+            success: true,
+            user: authResult.data.user_data,
+            session: authResult.data.session
+          }
+        } else {
+          return {
+            success: false,
+            error: authResult.data.reason || 'Authentication failed'
+          }
+        }
       }
     } catch (error) {
       console.error('Sign in error:', error)
@@ -370,20 +389,32 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return false
       }
 
-      // Extend session by 8 hours
-      const extendedSession = {
-        ...currentSession,
-        expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
-        lastActivity: new Date().toISOString()
+      // Validate current session through Temporal
+      const validationResult = await temporalWorkflowService.validateSession({
+        sessionToken,
+        ipAddress: 'localhost',
+      })
+
+      if (validationResult.status === 'success' && validationResult.data.valid) {
+        // Extend session by 8 hours
+        const extendedSession = {
+          ...currentSession,
+          expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+          lastActivity: new Date().toISOString()
+        }
+
+        setSessionData(current => ({
+          ...current,
+          [sessionToken]: extendedSession
+        }))
+
+        setCurrentSession(extendedSession)
+        return true
+      } else {
+        // Session invalid - sign out
+        await signOut()
+        return false
       }
-
-      setSessionData(current => ({
-        ...current,
-        [sessionToken]: extendedSession
-      }))
-
-      setCurrentSession(extendedSession)
-      return true
     } catch (error) {
       console.error('Session refresh error:', error)
       return false

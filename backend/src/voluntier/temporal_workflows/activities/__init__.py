@@ -6,6 +6,8 @@ from .notification_activities import NotificationActivities
 from .security_activities import SecurityActivities
 from .data_activities import DataActivities
 from .llm_activities import LLMActivities
+from .auth_activities import AuthActivities
+from .document_activities import DocumentActivities
 
 # Create activity instances
 volunteer_activities = VolunteerActivities()
@@ -14,6 +16,8 @@ notification_activities = NotificationActivities()
 security_activities = SecurityActivities()
 data_activities = DataActivities()
 llm_activities = LLMActivities()
+auth_activities = AuthActivities()
+document_activities = DocumentActivities()
 
 __all__ = [
     "volunteer_activities",
@@ -22,4 +26,6 @@ __all__ = [
     "security_activities",
     "data_activities",
     "llm_activities",
+    "auth_activities",
+    "document_activities",
 ]

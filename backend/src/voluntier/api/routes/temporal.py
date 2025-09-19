@@ -9,6 +9,13 @@ from voluntier.temporal_workflows.schemas import (
     EventCreationRequest,
     NotificationRequest,
     AgentDecisionRequest,
+    AuthenticationRequest,
+    SessionValidationRequest,
+    DocumentUploadRequest,
+    BulkDocumentRequest,
+    PrivilegeCheckRequest,
+    OnboardingProgressRequest,
+    TelemetryEventRequest,
     WorkflowResponse,
 )
 from voluntier.utils.logging import get_logger
@@ -135,6 +142,185 @@ async def agent_decision(request: AgentDecisionRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Workflow execution failed: {str(e)}"
+        )
+
+
+@router.post("/auth/authenticate", response_model=WorkflowResponse)
+async def authenticate_user(request: AuthenticationRequest):
+    """Trigger authentication workflow."""
+    try:
+        client = await Client.connect(settings.temporal.host)
+        
+        # Start workflow
+        handle = await client.start_workflow(
+            "AuthenticationWorkflow",
+            request,
+            id=f"auth-{request.email}-{hash(request.ip_address)}",
+            task_queue=settings.temporal.task_queue,
+        )
+        
+        result = await handle.result()
+        
+        return WorkflowResponse(
+            status="success",
+            data=result,
+            message="Authentication workflow completed",
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to trigger authentication workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Authentication workflow failed: {str(e)}"
+        )
+
+
+@router.post("/auth/validate-session", response_model=WorkflowResponse)
+async def validate_session(request: SessionValidationRequest):
+    """Trigger session validation workflow."""
+    try:
+        client = await Client.connect(settings.temporal.host)
+        
+        # Start workflow
+        handle = await client.start_workflow(
+            "SessionManagementWorkflow",
+            request,
+            id=f"session-validation-{hash(request.session_token)}",
+            task_queue=settings.temporal.task_queue,
+        )
+        
+        result = await handle.result()
+        
+        return WorkflowResponse(
+            status="success",
+            data=result,
+            message="Session validation workflow completed",
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to trigger session validation workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Session validation workflow failed: {str(e)}"
+        )
+
+
+@router.post("/documents/upload", response_model=WorkflowResponse)
+async def upload_document(request: DocumentUploadRequest):
+    """Trigger document upload and processing workflow."""
+    try:
+        client = await Client.connect(settings.temporal.host)
+        
+        # Start workflow
+        handle = await client.start_workflow(
+            "DocumentProcessingWorkflow",
+            request,
+            id=f"doc-upload-{request.user_id}-{hash(request.filename)}",
+            task_queue=settings.temporal.task_queue,
+        )
+        
+        result = await handle.result()
+        
+        return WorkflowResponse(
+            status="success",
+            data=result,
+            message="Document processing workflow completed",
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to trigger document processing workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Document processing workflow failed: {str(e)}"
+        )
+
+
+@router.post("/documents/bulk-upload", response_model=WorkflowResponse)
+async def bulk_upload_documents(request: BulkDocumentRequest):
+    """Trigger bulk document processing workflow."""
+    try:
+        client = await Client.connect(settings.temporal.host)
+        
+        # Start workflow
+        handle = await client.start_workflow(
+            "BulkDocumentProcessingWorkflow",
+            request,
+            id=f"bulk-upload-{request.user_id}-{len(request.documents)}",
+            task_queue=settings.temporal.task_queue,
+        )
+        
+        result = await handle.result()
+        
+        return WorkflowResponse(
+            status="success",
+            data=result,
+            message="Bulk document processing workflow completed",
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to trigger bulk document processing workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Bulk document processing workflow failed: {str(e)}"
+        )
+
+
+@router.post("/auth/check-privileges", response_model=WorkflowResponse)
+async def check_privileges(request: PrivilegeCheckRequest):
+    """Trigger privilege check workflow."""
+    try:
+        client = await Client.connect(settings.temporal.host)
+        
+        # Start workflow
+        handle = await client.start_workflow(
+            "PrivilegeCheckWorkflow",
+            request,
+            id=f"privilege-check-{request.user_id}-{request.privilege}",
+            task_queue=settings.temporal.task_queue,
+        )
+        
+        result = await handle.result()
+        
+        return WorkflowResponse(
+            status="success",
+            data=result,
+            message="Privilege check workflow completed",
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to trigger privilege check workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Privilege check workflow failed: {str(e)}"
+        )
+
+
+@router.post("/telemetry/track", response_model=WorkflowResponse)
+async def track_telemetry(request: TelemetryEventRequest):
+    """Trigger telemetry tracking workflow."""
+    try:
+        client = await Client.connect(settings.temporal.host)
+        
+        # Start workflow (fire-and-forget for telemetry)
+        handle = await client.start_workflow(
+            "TelemetryTrackingWorkflow",
+            request,
+            id=f"telemetry-{request.user_id or 'anonymous'}-{request.event_type}",
+            task_queue=settings.temporal.task_queue,
+        )
+        
+        # Don't wait for result for telemetry events
+        return WorkflowResponse(
+            status="success",
+            data={"workflow_id": handle.id},
+            message="Telemetry tracking workflow started",
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to trigger telemetry tracking workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Telemetry tracking workflow failed: {str(e)}"
         )
 
 
