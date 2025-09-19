@@ -5,6 +5,7 @@ import { EventCard } from './components/EventCard'
 import { ProfileSetup } from './components/ProfileSetup'
 import { OrganizationDashboard } from './components/OrganizationDashboard'
 import { ImpactTracker } from './components/ImpactTracker'
+import { SecurityDashboard } from './components/SecurityDashboard'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
 import { Badge } from './components/ui/badge'
@@ -39,7 +40,7 @@ export interface UserProfile {
 
 function App() {
   const [userProfile, setUserProfile] = useKV<UserProfile | null>('user-profile', null)
-  const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact'>('events')
+  const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security'>('events')
   const [events, setEvents] = useKV<VolunteerEvent[]>('volunteer-events', [])
   const [registrations, setRegistrations] = useKV<{[eventId: string]: boolean}>('user-registrations', {})
 
@@ -211,6 +212,9 @@ function App() {
 
       case 'impact':
         return <ImpactTracker events={events || []} registrations={registrations || {}} />
+
+      case 'security':
+        return <SecurityDashboard />
 
       default:
         return null

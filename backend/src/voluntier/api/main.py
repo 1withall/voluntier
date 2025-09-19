@@ -19,10 +19,14 @@ from voluntier.api.routes import (
     temporal_router,
 )
 from voluntier.api.memory import router as memory_router
+from voluntier.api.security import get_security_router
 from voluntier.database import close_db_connections
 from voluntier.middleware.logging import LoggingMiddleware
-from voluntier.middleware.security import SecurityMiddleware
+from voluntier.middleware.security import AdvancedSecurityMiddleware
 from voluntier.middleware.metrics import MetricsMiddleware
+from voluntier.services.security_service import security_service
+from voluntier.services.threat_detection import threat_detection_system
+from voluntier.services.honeypot_system import honeypot_manager
 from voluntier.utils.logging import setup_logging
 from voluntier.utils.exceptions import setup_exception_handlers
 
@@ -37,8 +41,13 @@ async def lifespan(app: FastAPI):
     
     # Initialize services
     try:
-        # Here you would initialize any startup services
-        # e.g., connect to external services, initialize caches, etc.
+        # Initialize security services
+        logger.info("Initializing security services...")
+        await security_service.initialize()
+        await threat_detection_system.initialize()
+        await honeypot_manager.initialize()
+        
+        logger.info("Security services initialized successfully")
         logger.info("Application startup completed")
     except Exception as e:
         logger.error(f"Failed to initialize application: {str(e)}")
@@ -50,6 +59,9 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Voluntier API server")
     
     try:
+        # Shutdown security services
+        await security_service.shutdown()
+        
         # Close database connections
         await close_db_connections()
         logger.info("Database connections closed")
@@ -67,7 +79,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
-        description="Autonomous agent-driven volunteer coordination platform",
+        description="Autonomous agent-driven volunteer coordination platform with advanced security",
         docs_url="/docs" if settings.debug else None,
         redoc_url="/redoc" if settings.debug else None,
         openapi_url="/openapi.json" if settings.debug else None,
@@ -83,7 +95,7 @@ def create_app() -> FastAPI:
     # Setup exception handlers
     setup_exception_handlers(app)
     
-    logger.info(f"Created FastAPI app for {settings.environment} environment")
+    logger.info(f"Created FastAPI app for {settings.environment} environment with advanced security")
     
     return app
 
@@ -91,8 +103,8 @@ def create_app() -> FastAPI:
 def add_middleware(app: FastAPI) -> None:
     """Add middleware to the FastAPI application."""
     
-    # Security middleware (first for security)
-    app.add_middleware(SecurityMiddleware)
+    # Advanced Security middleware (first for comprehensive security)
+    app.add_middleware(AdvancedSecurityMiddleware)
     
     # Trusted host middleware
     if settings.is_production:
@@ -119,6 +131,12 @@ def add_middleware(app: FastAPI) -> None:
 
 def add_routes(app: FastAPI) -> None:
     """Add routes to the FastAPI application."""
+    
+    # Security API routes (high priority)
+    app.include_router(
+        get_security_router(),
+        tags=["Security"],
+    )
     
     # API routes
     app.include_router(
@@ -163,14 +181,42 @@ def add_routes(app: FastAPI) -> None:
         tags=["Memory"],
     )
     
-    # Health check endpoint
+    # Health check endpoint with security status
     @app.get("/health")
     async def health_check():
-        """Health check endpoint."""
+        """Health check endpoint with security status."""
+        security_status = "active" if security_service.security_active else "inactive"
+        threat_detection_status = "active" if threat_detection_system.detection_active else "inactive"
+        
         return {
             "status": "healthy",
             "version": settings.app_version,
             "environment": settings.environment,
+            "security": {
+                "security_service": security_status,
+                "threat_detection": threat_detection_status,
+                "honeypots_deployed": len(honeypot_manager.honeypots)
+            }
+        }
+    
+    # Security status endpoint
+    @app.get("/security/status")
+    async def security_status():
+        """Security system status endpoint."""
+        if not security_service.security_active:
+            return JSONResponse(
+                status_code=503,
+                content={"status": "Security services not active"}
+            )
+            
+        detection_stats = await threat_detection_system.get_detection_statistics()
+        honeypot_stats = await honeypot_manager.get_honeypot_statistics()
+        
+        return {
+            "security_active": security_service.security_active,
+            "threat_detection": detection_stats,
+            "honeypots": honeypot_stats,
+            "last_updated": asyncio.get_event_loop().time()
         }
     
     # Root endpoint
@@ -178,8 +224,9 @@ def add_routes(app: FastAPI) -> None:
     async def root():
         """Root endpoint."""
         return {
-            "message": "Voluntier API",
+            "message": "Voluntier API - Secure Volunteer Platform",
             "version": settings.app_version,
+            "security": "Advanced threat detection and response enabled",
             "docs": "/docs" if settings.debug else "Contact admin for documentation",
         }
 

@@ -1,12 +1,12 @@
 import { UserProfile } from '../App'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { HandHeart, Users, Calendar, ChartBar } from '@phosphor-icons/react'
+import { HandHeart, Users, Calendar, ChartBar, Shield } from '@phosphor-icons/react'
 
 interface HeaderProps {
   userProfile: UserProfile | null
-  currentView: 'events' | 'profile' | 'organization' | 'impact'
-  onViewChange: (view: 'events' | 'profile' | 'organization' | 'impact') => void
+  currentView: 'events' | 'profile' | 'organization' | 'impact' | 'security'
+  onViewChange: (view: 'events' | 'profile' | 'organization' | 'impact' | 'security') => void
 }
 
 export function Header({ userProfile, currentView, onViewChange }: HeaderProps) {
@@ -15,6 +15,7 @@ export function Header({ userProfile, currentView, onViewChange }: HeaderProps) 
     { id: 'profile' as const, label: 'Profile', icon: Users },
     { id: 'organization' as const, label: 'Organizations', icon: HandHeart },
     { id: 'impact' as const, label: 'Impact', icon: ChartBar },
+    { id: 'security' as const, label: 'Security', icon: Shield },
   ]
 
   return (
