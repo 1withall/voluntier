@@ -3,6 +3,7 @@ import { Badge } from './ui/badge'
 import { Progress } from './ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { useTelemetry } from '../services/telemetry'
+import { PrivilegeGuard } from './auth/PrivilegeGuard'
 import { 
   Activity, 
   TrendUp, 
@@ -16,6 +17,23 @@ import {
 } from '@phosphor-icons/react'
 
 export function TelemetryDashboard() {
+  return (
+    <PrivilegeGuard 
+      requiredPrivilege="view_telemetry" 
+      requiredLevel="read"
+      fallbackMessage="Access to telemetry and analytics requires administrative privileges."
+      onSignInClick={() => {
+        // This will be handled by the parent component's sign-in dialog
+        const event = new CustomEvent('show-admin-signin')
+        window.dispatchEvent(event)
+      }}
+    >
+      <TelemetryDashboardContent />
+    </PrivilegeGuard>
+  )
+}
+
+function TelemetryDashboardContent() {
   const { analytics } = useTelemetry()
 
   const formatNumber = (num: number) => {

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { useTelemetry } from './services/telemetry'
+import { AuthProvider } from './services/auth'
 import { initializeSampleData } from './data/sampleData'
 import { Header } from './components/Header'
 import { EventCard } from './components/EventCard'
 import { OrganizationDashboard } from './components/OrganizationDashboard'
 import { ImpactTracker } from './components/ImpactTracker'
 import { SecurityDashboard } from './components/SecurityDashboard'
-import { SignupFlow } from './components/SignupFlow'
+import { LandingPage } from './components/landing/LandingPage'
 import { QRVerificationSystem } from './components/QRVerificationSystem'
 import { TelemetryDashboard } from './components/TelemetryDashboard'
 import { UnifiedProfileView } from './components/profiles/UnifiedProfileView'
@@ -36,6 +37,14 @@ export interface VolunteerEvent {
 }
 
 function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  )
+}
+
+function AppContent() {
   const [userProfile, setUserProfile] = useKV<UserProfile | null>('user-profile', null)
   const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'notifications' | 'onboarding'>('events')
   const [events, setEvents] = useKV<VolunteerEvent[]>('volunteer-events', [])
@@ -97,7 +106,7 @@ function App() {
 
   const renderContent = () => {
     if (!userProfile) {
-      return <SignupFlow onSignupComplete={setUserProfile} />
+      return <LandingPage onSignupComplete={setUserProfile} />
     }
 
     switch (currentView) {

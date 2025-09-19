@@ -24,12 +24,30 @@ import {
 } from '@phosphor-icons/react'
 import { SecurityEvent } from '../types/auth'
 import { UserProfile } from '../types/profiles'
+import { PrivilegeGuard } from './auth/PrivilegeGuard'
 
 interface SecurityDashboardProps {
   userProfile?: UserProfile | null
 }
 
 export function SecurityDashboard({ userProfile }: SecurityDashboardProps) {
+  return (
+    <PrivilegeGuard 
+      requiredPrivilege="view_security_dashboard" 
+      requiredLevel="read"
+      fallbackMessage="Access to the security dashboard requires administrative privileges."
+      onSignInClick={() => {
+        // This will be handled by the parent component's sign-in dialog
+        const event = new CustomEvent('show-admin-signin')
+        window.dispatchEvent(event)
+      }}
+    >
+      <SecurityDashboardContent userProfile={userProfile} />
+    </PrivilegeGuard>
+  )
+}
+
+function SecurityDashboardContent({ userProfile }: SecurityDashboardProps) {
   const [securityEvents, setSecurityEvents] = useKV<SecurityEvent[]>('security-events', [])
   const [threatLevel, setThreatLevel] = useKV<'low' | 'medium' | 'high' | 'critical'>('threat-level', 'low')
   const [securityScore, setSecurityScore] = useKV<number>('platform-security-score', 95)

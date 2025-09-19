@@ -14,6 +14,8 @@ import { Separator } from './ui/separator'
 import { Alert, AlertDescription } from './ui/alert'
 import { Plus, Building, Calendar, Users, Download, FileText, CheckCircle, AlertTriangle, Shield } from '@phosphor-icons/react'
 import { useTelemetry } from '../services/telemetry'
+import { usePrivilege } from './auth/PrivilegeGuard'
+import { ProjectManagementPDFGenerator, EventProjectData } from '../services/pdfGenerator'
 import { UserProfile } from '../types/profiles'
 import { toast } from 'sonner'
 
@@ -101,6 +103,13 @@ export function OrganizationDashboard({ events, onAddEvent, onUpdateEvent, userP
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { trackUserAction } = useTelemetry()
+  
+  // Check privileges for organization operations
+  const createEventsPrivilege = usePrivilege('create_events')
+  const manageEventsPrivilege = usePrivilege('manage_events')
+
+  // Check if user is verified organization
+  const isVerifiedOrganization = userProfile?.userType === 'organization' && userProfile?.verificationStatus === 'verified'
   
   const [newEvent, setNewEvent] = useState<EnhancedEventForm>({
     title: '',
@@ -391,8 +400,164 @@ export function OrganizationDashboard({ events, onAddEvent, onUpdateEvent, userP
     }
   }
 
+  // Enhanced PDF Generation Functions for Project Management
+  const generateProjectPDFs = (event: VolunteerEvent) => {
+    try {
+      const projectData: EventProjectData = {
+        eventId: event.id,
+        eventTitle: event.title,
+        organization: event.organization,
+        projectManager: userProfile?.leadership?.executiveDirector?.name || 'Project Manager',
+        startDate: event.date,
+        endDate: event.date, // Single day event, same end date
+        description: event.description,
+        objectives: [
+          'Successfully execute volunteer event',
+          'Ensure volunteer safety and satisfaction',
+          'Achieve measurable community impact',
+          'Build organizational reputation'
+        ],
+        deliverables: [
+          'Completed volunteer event',
+          'Volunteer feedback collection',
+          'Impact measurement report',
+          'Event documentation'
+        ],
+        timeline: [
+          { milestone: 'Event Planning Complete', date: event.date, status: 'pending' },
+          { milestone: 'Volunteer Recruitment', date: event.date, status: 'pending' },
+          { milestone: 'Event Execution', date: event.date, status: 'pending' },
+          { milestone: 'Impact Assessment', date: event.date, status: 'pending' }
+        ],
+        team: [
+          { 
+            name: userProfile?.leadership?.executiveDirector?.name || 'Project Manager', 
+            role: 'Project Manager', 
+            contact: userProfile?.contactInfo?.primaryEmail || '' 
+          },
+          { 
+            name: userProfile?.leadership?.volunteerCoordinator?.name || 'Volunteer Coordinator', 
+            role: 'Volunteer Coordinator', 
+            contact: userProfile?.leadership?.volunteerCoordinator?.email || '' 
+          }
+        ],
+        budget: [
+          { item: 'Event Materials', amount: 500, category: 'Supplies' },
+          { item: 'Volunteer Recognition', amount: 200, category: 'Recognition' },
+          { item: 'Safety Equipment', amount: 150, category: 'Safety' },
+          { item: 'Miscellaneous', amount: 100, category: 'Other' }
+        ],
+        risks: [
+          { 
+            risk: 'Insufficient volunteer turnout', 
+            probability: 'medium', 
+            impact: 'high', 
+            mitigation: 'Robust recruitment campaign with backup volunteers' 
+          },
+          { 
+            risk: 'Weather-related cancellation', 
+            probability: 'low', 
+            impact: 'high', 
+            mitigation: 'Indoor backup venue or postponement plan' 
+          },
+          { 
+            risk: 'Volunteer safety incident', 
+            probability: 'low', 
+            impact: 'high', 
+            mitigation: 'Comprehensive safety briefing and first aid availability' 
+          }
+        ],
+        stakeholders: [
+          { name: 'Event Volunteers', role: 'Primary Participants', influence: 'high' },
+          { name: 'Community Members', role: 'Beneficiaries', influence: 'medium' },
+          { name: 'Organization Board', role: 'Oversight', influence: 'high' },
+          { name: 'Local Partners', role: 'Support', influence: 'medium' }
+        ]
+      }
+
+      return projectData
+    } catch (error) {
+      console.error('Error generating project data:', error)
+      toast.error('Failed to generate project management data')
+      return null
+    }
+  }
+
+  const handleDownloadProjectCharter = (event: VolunteerEvent) => {
+    const projectData = generateProjectPDFs(event)
+    if (projectData) {
+      ProjectManagementPDFGenerator.generateProjectCharter(projectData)
+      trackUserAction('project_charter_downloaded', 'organization', event.id)
+      toast.success('Project Charter downloaded successfully')
+    }
+  }
+
+  const handleDownloadTimeline = (event: VolunteerEvent) => {
+    const projectData = generateProjectPDFs(event)
+    if (projectData) {
+      ProjectManagementPDFGenerator.generateProjectTimeline(projectData)
+      trackUserAction('project_timeline_downloaded', 'organization', event.id)
+      toast.success('Project Timeline downloaded successfully')
+    }
+  }
+
+  const handleDownloadRiskAssessment = (event: VolunteerEvent) => {
+    const projectData = generateProjectPDFs(event)
+    if (projectData) {
+      ProjectManagementPDFGenerator.generateRiskAssessment(projectData)
+      trackUserAction('risk_assessment_downloaded', 'organization', event.id)
+      toast.success('Risk Assessment downloaded successfully')
+    }
+  }
+
+  const handleDownloadResourcePlan = (event: VolunteerEvent) => {
+    const projectData = generateProjectPDFs(event)
+    if (projectData) {
+      ProjectManagementPDFGenerator.generateResourcePlan(projectData)
+      trackUserAction('resource_plan_downloaded', 'organization', event.id)
+      toast.success('Resource Plan downloaded successfully')
+    }
+  }
+
+  const handleDownloadCommunicationPlan = (event: VolunteerEvent) => {
+    const projectData = generateProjectPDFs(event)
+    if (projectData) {
+      ProjectManagementPDFGenerator.generateCommunicationPlan(projectData)
+      trackUserAction('communication_plan_downloaded', 'organization', event.id)
+      toast.success('Communication Plan downloaded successfully')
+    }
+  }
+
+  const handleDownloadClosureReport = (event: VolunteerEvent) => {
+    const projectData = generateProjectPDFs(event)
+    if (projectData) {
+      ProjectManagementPDFGenerator.generateClosureReport(projectData)
+      trackUserAction('closure_report_downloaded', 'organization', event.id)
+      toast.success('Closure Report downloaded successfully')
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Access Control Alert */}
+      {!isVerifiedOrganization && (
+        <Alert variant="destructive">
+          <AlertTriangle size={16} />
+          <AlertDescription>
+            Organization verification required. Only verified organizations can create and manage events.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!createEventsPrivilege.hasPrivilege && (
+        <Alert>
+          <Shield size={16} />
+          <AlertDescription>
+            Event creation privileges required. Contact your administrator for access.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Organization Dashboard</h1>
@@ -401,7 +566,10 @@ export function OrganizationDashboard({ events, onAddEvent, onUpdateEvent, userP
         <div className="flex gap-2">
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
+              <Button 
+                className="flex items-center gap-2"
+                disabled={!isVerifiedOrganization || !createEventsPrivilege.hasPrivilege}
+              >
                 <Plus size={16} />
                 Create Event
               </Button>
@@ -1103,6 +1271,74 @@ export function OrganizationDashboard({ events, onAddEvent, onUpdateEvent, userP
                     </div>
                   </div>
                 )}
+
+                {/* Project Management Downloads */}
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Project Management Tools:</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadProjectCharter(event)}
+                      className="text-xs h-8"
+                      disabled={!isVerifiedOrganization}
+                    >
+                      <FileText size={12} className="mr-1" />
+                      Charter
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadTimeline(event)}
+                      className="text-xs h-8"
+                      disabled={!isVerifiedOrganization}
+                    >
+                      <Calendar size={12} className="mr-1" />
+                      Timeline
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadRiskAssessment(event)}
+                      className="text-xs h-8"
+                      disabled={!isVerifiedOrganization}
+                    >
+                      <AlertTriangle size={12} className="mr-1" />
+                      Risk Plan
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadResourcePlan(event)}
+                      className="text-xs h-8"
+                      disabled={!isVerifiedOrganization}
+                    >
+                      <Users size={12} className="mr-1" />
+                      Resources
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadCommunicationPlan(event)}
+                      className="text-xs h-8"
+                      disabled={!isVerifiedOrganization}
+                    >
+                      <Shield size={12} className="mr-1" />
+                      Comms
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadClosureReport(event)}
+                      className="text-xs h-8"
+                      disabled={!isVerifiedOrganization}
+                    >
+                      <CheckCircle size={12} className="mr-1" />
+                      Closure
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))
