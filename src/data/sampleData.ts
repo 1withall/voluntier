@@ -1,6 +1,7 @@
 // Sample data initialization for demonstration
 
 import { VolunteerEvent } from '../App'
+import { initializeTestAccounts } from './testAccounts'
 
 export const sampleEvents: VolunteerEvent[] = [
   {
@@ -95,4 +96,7 @@ export const initializeSampleData = () => {
   if (!existingEvents || JSON.parse(existingEvents).length === 0) {
     localStorage.setItem('voluntier_volunteer-events', JSON.stringify(sampleEvents))
   }
+  
+  // Initialize test accounts
+  initializeTestAccounts()
 }

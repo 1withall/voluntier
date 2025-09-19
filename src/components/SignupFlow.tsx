@@ -3,10 +3,11 @@ import { UserProfile } from '../types/profiles'
 import { IndividualOnboarding } from './onboarding/IndividualOnboarding'
 import { OrganizationOnboarding } from './onboarding/OrganizationOnboarding'
 import { BusinessOnboarding } from './onboarding/BusinessOnboarding'
+import { TestAccountLogin } from './TestAccountLogin'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { User, Building, Briefcase, Shield, CheckCircle } from '@phosphor-icons/react'
+import { User, Building, Briefcase, Shield, CheckCircle, TestTube } from '@phosphor-icons/react'
 
 interface SignupFlowProps {
   onSignupComplete: (userData: UserProfile) => void
@@ -16,7 +17,7 @@ type UserType = 'individual' | 'organization' | 'business'
 
 export function SignupFlow({ onSignupComplete }: SignupFlowProps) {
   const [selectedUserType, setSelectedUserType] = useState<UserType | null>(null)
-  const [currentStep, setCurrentStep] = useState<'select' | 'form' | 'verification'>('select')
+  const [currentStep, setCurrentStep] = useState<'select' | 'form' | 'verification' | 'test-login'>('select')
 
   const userTypes = [
     {
@@ -110,6 +111,29 @@ export function SignupFlow({ onSignupComplete }: SignupFlowProps) {
                 reference checks, and in-person verification. This process ensures community safety 
                 and trust. Only one account per individual or entity is permitted.
               </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Test Account Login Option */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <TestTube size={20} className="text-amber-600 mt-0.5" />
+            <div className="text-left flex-1">
+              <h3 className="font-semibold text-amber-900 mb-1">Development Mode</h3>
+              <p className="text-sm text-amber-700 mb-3">
+                For testing and demonstration purposes, you can login with pre-configured test accounts
+                that showcase different user types and verification statuses.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setCurrentStep('test-login')}
+                className="border-amber-300 text-amber-800 hover:bg-amber-100"
+              >
+                <TestTube size={16} className="mr-2" />
+                Login with Test Account
+              </Button>
             </div>
           </div>
         </div>
@@ -283,6 +307,12 @@ export function SignupFlow({ onSignupComplete }: SignupFlowProps) {
         {currentStep === 'select' && renderUserTypeSelection()}
         {currentStep === 'form' && renderSignupForm()}
         {currentStep === 'verification' && renderVerificationInstructions()}
+        {currentStep === 'test-login' && (
+          <TestAccountLogin
+            onLoginSuccess={onSignupComplete}
+            onCancel={() => setCurrentStep('select')}
+          />
+        )}
       </div>
     </div>
   )
