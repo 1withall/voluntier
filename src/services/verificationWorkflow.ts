@@ -1,5 +1,22 @@
 import { DocumentVerificationRequest, ReferenceVerificationRequest, VerificationWorkflow, VerificationAuditLog } from '../types/verification'
-import { useKV } from '@github/spark/hooks'
+
+// Simple localStorage utility functions to replace Spark KV
+const localStorageGet = <T>(key: string): T | null => {
+  try {
+    const item = localStorage.getItem(key)
+    return item ? JSON.parse(item) : null
+  } catch {
+    return null
+  }
+}
+
+const localStorageSet = <T>(key: string, value: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Ignore errors
+  }
+}
 
 /**
  * Automated Document Verification Service
@@ -279,14 +296,14 @@ export class DocumentVerificationService {
    */
   private async storeVerificationRequest(request: DocumentVerificationRequest): Promise<void> {
     const storageKey = `verification_requests`
-    const existing = await ((window as any).spark?.kv?.get<DocumentVerificationRequest[]>(storageKey)) || []
+    const existing = localStorageGet<DocumentVerificationRequest[]>(storageKey) || []
     const updated = existing.filter(r => r.id !== request.id)
     updated.push(request)
-    await ((window as any).spark?.kv?.set(storageKey, updated))
+    localStorageSet(storageKey, updated)
   }
 
   private async getVerificationRequest(documentId: string): Promise<DocumentVerificationRequest | null> {
-    const requests = await ((window as any).spark?.kv?.get<DocumentVerificationRequest[]>('verification_requests')) || []
+    const requests = localStorageGet<DocumentVerificationRequest[]>('verification_requests') || []
     return requests.find(r => r.id === documentId) || null
   }
 
@@ -310,16 +327,16 @@ export class DocumentVerificationService {
       riskImpact: details.error ? 'medium' : 'low'
     }
 
-    const logs = await ((window as any).spark?.kv?.get<VerificationAuditLog[]>('verification_audit_logs')) || []
+    const logs = localStorageGet<VerificationAuditLog[]>('verification_audit_logs') || []
     logs.push(auditLog)
-    await ((window as any).spark?.kv?.set('verification_audit_logs', logs))
+    localStorageSet('verification_audit_logs', logs)
   }
 
   /**
    * Get verification requests for a user
    */
   async getUserVerificationRequests(userId: string): Promise<DocumentVerificationRequest[]> {
-    const requests = (await ((window as any).spark?.kv?.get('verification_requests') as DocumentVerificationRequest[])) || []
+    const requests = (localStorageGet('verification_requests') as DocumentVerificationRequest[]) || []
     return requests.filter(r => r.userId === userId)
   }
 
@@ -442,14 +459,14 @@ export class ReferenceVerificationService {
    */
   private async storeReferenceRequest(request: ReferenceVerificationRequest): Promise<void> {
     const storageKey = 'reference_requests'
-    const existing = (await ((window as any).spark?.kv?.get(storageKey) as ReferenceVerificationRequest[])) || []
+    const existing = (localStorageGet(storageKey) as ReferenceVerificationRequest[]) || []
     const updated = existing.filter(r => r.id !== request.id)
     updated.push(request)
-    await ((window as any).spark?.kv?.set(storageKey, updated))
+    localStorageSet(storageKey, updated)
   }
 
   private async getReferenceRequest(referenceId: string): Promise<ReferenceVerificationRequest | null> {
-    const requests = (await ((window as any).spark?.kv?.get('reference_requests') as ReferenceVerificationRequest[])) || []
+    const requests = (localStorageGet('reference_requests') as ReferenceVerificationRequest[]) || []
     return requests.find(r => r.id === referenceId) || null
   }
 
@@ -465,7 +482,7 @@ export class ReferenceVerificationService {
    * Get reference requests for a user
    */
   async getUserReferenceRequests(userId: string): Promise<ReferenceVerificationRequest[]> {
-    const requests = (await ((window as any).spark?.kv?.get('reference_requests') as ReferenceVerificationRequest[])) || []
+    const requests = (localStorageGet('reference_requests') as ReferenceVerificationRequest[]) || []
     return requests.filter(r => r.userId === userId)
   }
 }

@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger 
 } from './ui/dropdown-menu'
 import { Dialog, DialogContent } from './ui/dialog'
-import { HandHeart, Users, Calendar, ChartBar, Shield, QrCode, Activity, FileText, ChartLine, Bell, SignOut, SignIn, User, ChevronDown } from '@phosphor-icons/react'
+import { HandHeart, Users, Calendar, ChartBar, Shield, QrCode, Activity, FileText, ChartLine, Bell, SignOut, SignIn, User, CaretDown } from '@phosphor-icons/react'
 import { useAuth } from '../services/auth'
 import { usePrivilege } from './auth/PrivilegeGuard'
 import { SignInForm } from './auth/SignInForm'
@@ -155,7 +155,7 @@ export function Header({ userProfile, currentView, onViewChange }: HeaderProps) 
                       <Button variant="outline" size="sm" className="flex items-center gap-2">
                         <Shield size={16} className="text-primary" />
                         <span className="hidden sm:inline">Admin</span>
-                        <ChevronDown size={14} />
+                        <CaretDown size={14} />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">

@@ -1,5 +1,5 @@
 // Authentication and privilege management service
-import { useKV } from '@github/spark/hooks'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react'
 import { 
   AdminUser, 
@@ -70,10 +70,10 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null)
   const [currentSession, setCurrentSession] = useState<ActiveSession | null>(null)
-  const [regularUser, setRegularUser] = useKV<UserProfile | null>('user-profile', null)
+  const [regularUser, setRegularUser] = useLocalStorage<UserProfile | null>('user-profile', null)
   const [isLoading, setIsLoading] = useState(true)
-  const [adminUsers, setAdminUsers] = useKV<AdminUser[]>('admin-users', [])
-  const [sessionData, setSessionData] = useKV<Record<string, ActiveSession>>('active-sessions', {})
+  const [adminUsers, setAdminUsers] = useLocalStorage<AdminUser[]>('admin-users', [])
+  const [sessionData, setSessionData] = useLocalStorage<Record<string, ActiveSession>>('active-sessions', {})
   const [adminInitialized, setAdminInitialized] = useState(false)
   const [sessionChecked, setSessionChecked] = useState(false)
 

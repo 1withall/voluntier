@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useLocalStorage } from './hooks/useLocalStorage'
 import { useTelemetry } from './services/telemetry'
 import { AuthProvider } from './services/auth'
 import { initializeSampleData } from './data/sampleData'
@@ -45,10 +45,10 @@ function App() {
 }
 
 function AppContent() {
-  const [userProfile, setUserProfile] = useKV<UserProfile | null>('user-profile', null)
+  const [userProfile, setUserProfile] = useLocalStorage<UserProfile | null>('user-profile', null)
   const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'notifications' | 'onboarding'>('events')
-  const [events, setEvents] = useKV<VolunteerEvent[]>('volunteer-events', [])
-  const [registrations, setRegistrations] = useKV<{[eventId: string]: boolean}>('user-registrations', {})
+  const [events, setEvents] = useLocalStorage<VolunteerEvent[]>('volunteer-events', [])
+  const [registrations, setRegistrations] = useLocalStorage<{[eventId: string]: boolean}>('user-registrations', {})
   
   const { trackUserAction, trackPageView, setUserId } = useTelemetry()
 

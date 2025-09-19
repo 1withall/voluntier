@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { useTelemetry } from '../../services/telemetry'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
@@ -31,7 +31,7 @@ export function EnhancedDocumentUpload({
   onUploadError
 }: EnhancedDocumentUploadProps) {
   const [activeTab, setActiveTab] = useState<'single' | 'bulk'>('single')
-  const [uploadStats, setUploadStats] = useKV<{
+  const [uploadStats, setUploadStats] = useLocalStorage<{
     totalUploads: number
     successfulUploads: number
     failedUploads: number

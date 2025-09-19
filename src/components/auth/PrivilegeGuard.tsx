@@ -4,7 +4,7 @@ import { AllPrivileges, PrivilegeLevel } from '../../types/privileges'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Alert, AlertDescription } from '../ui/alert'
-import { Lock, Shield, AlertTriangle } from '@phosphor-icons/react'
+import { Lock, Shield, Warning } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 
 interface PrivilegeGuardProps {
@@ -44,7 +44,7 @@ export const PrivilegeGuard = ({
     title = 'Authentication Required'
     description = 'Please sign in to access administrative features.'
   } else if (privilegeCheck.reason === 'Privilege has expired') {
-    icon = <AlertTriangle size={48} className="text-destructive mb-4" />
+    icon = <Warning size={48} className="text-destructive mb-4" />
     title = 'Access Expired'
     description = `Your access to this feature expired on ${new Date(privilegeCheck.expiresAt!).toLocaleDateString()}.`
     alertVariant = 'destructive'

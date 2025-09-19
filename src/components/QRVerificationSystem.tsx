@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -15,7 +15,7 @@ interface QRVerificationSystemProps {
 }
 
 export function QRVerificationSystem({ userProfile }: QRVerificationSystemProps) {
-  const [qrCodes, setQRCodes] = useKV<VerificationQRCode[]>('verification-qr-codes', [])
+  const [qrCodes, setQRCodes] = useLocalStorage<VerificationQRCode[]>('verification-qr-codes', [])
   const [scannedCode, setScannedCode] = useState('')
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle')
   const [verificationMessage, setVerificationMessage] = useState('')

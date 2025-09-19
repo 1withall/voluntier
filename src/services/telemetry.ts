@@ -1,7 +1,6 @@
 // Comprehensive telemetry and logging system for security and operational monitoring
 
 import { useState, useEffect, useCallback } from 'react'
-import { useKV } from '@github/spark/hooks'
 import { temporalWorkflowService } from './temporalWorkflowService'
 
 export interface TelemetryEvent {

@@ -1,7 +1,7 @@
 // Security monitoring and threat detection system
 
 import { useState, useEffect } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -48,13 +48,13 @@ export function SecurityDashboard({ userProfile }: SecurityDashboardProps) {
 }
 
 function SecurityDashboardContent({ userProfile }: SecurityDashboardProps) {
-  const [securityEvents, setSecurityEvents] = useKV<SecurityEvent[]>('security-events', [])
-  const [threatLevel, setThreatLevel] = useKV<'low' | 'medium' | 'high' | 'critical'>('threat-level', 'low')
-  const [securityScore, setSecurityScore] = useKV<number>('platform-security-score', 95)
-  const [activeThreats, setActiveThreats] = useKV<number>('active-threats', 0)
-  const [mitigatedThreats, setMitigatedThreats] = useKV<number>('mitigated-threats', 247)
-  const [vulnerabilities, setVulnerabilities] = useKV<any[]>('vulnerabilities', [])
-  const [auditLogs, setAuditLogs] = useKV<any[]>('audit-logs', [])
+  const [securityEvents, setSecurityEvents] = useLocalStorage<SecurityEvent[]>('security-events', [])
+  const [threatLevel, setThreatLevel] = useLocalStorage<'low' | 'medium' | 'high' | 'critical'>('threat-level', 'low')
+  const [securityScore, setSecurityScore] = useLocalStorage<number>('platform-security-score', 95)
+  const [activeThreats, setActiveThreats] = useLocalStorage<number>('active-threats', 0)
+  const [mitigatedThreats, setMitigatedThreats] = useLocalStorage<number>('mitigated-threats', 247)
+  const [vulnerabilities, setVulnerabilities] = useLocalStorage<any[]>('vulnerabilities', [])
+  const [auditLogs, setAuditLogs] = useLocalStorage<any[]>('audit-logs', [])
 
   // Simulated real-time security monitoring
   useEffect(() => {

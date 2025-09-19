@@ -7,7 +7,7 @@
  * - Email notification fallback
  */
 
-import { useKV } from '@github/spark/hooks'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useState, useEffect, useCallback } from 'react'
 
 export interface NotificationData {
@@ -395,8 +395,8 @@ export class NotificationService {
 
 // React hook for using notification service
 export function useNotifications(userId?: string) {
-  const [notifications, setNotifications] = useKV<NotificationData[]>(`notifications-${userId}`, [])
-  const [unreadCount, setUnreadCount] = useKV<number>(`unread-count-${userId}`, 0)
+  const [notifications, setNotifications] = useLocalStorage<NotificationData[]>(`notifications-${userId}`, [])
+  const [unreadCount, setUnreadCount] = useLocalStorage<number>(`unread-count-${userId}`, 0)
   const [service] = useState(() => new NotificationService())
 
   useEffect(() => {

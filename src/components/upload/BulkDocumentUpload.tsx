@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { useTelemetry } from '../../services/telemetry'
 import { createDocumentPreprocessor } from '../../services/documentPreprocessor'
 import { createSimplifiedMLDocumentVerifier } from '../../services/simplifiedMLVerifier'
@@ -44,7 +44,7 @@ export function BulkDocumentUpload({
   maxFiles = 20,
   maxFileSize = 50 * 1024 * 1024 // 50MB
 }: BulkDocumentUploadProps) {
-  const [uploadSession, setUploadSession] = useKV<BulkUploadSession | null>('current-upload-session', null)
+  const [uploadSession, setUploadSession] = useLocalStorage<BulkUploadSession | null>('current-upload-session', null)
   const [dragState, setDragState] = useState<DragDropUploadState>({
     isDragActive: false,
     isDragAccept: false,

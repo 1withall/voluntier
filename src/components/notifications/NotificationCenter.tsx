@@ -24,7 +24,6 @@ import {
 } from '@phosphor-icons/react'
 import { useNotifications, NotificationData } from '../../services/notifications'
 import { UserProfile } from '../../types/profiles'
-import { useKV } from '@github/spark/hooks'
 
 interface NotificationCenterProps {
   userProfile: UserProfile

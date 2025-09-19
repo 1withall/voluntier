@@ -28,7 +28,7 @@ import {
 import { documentUploadService, DocumentUploadService, DocumentType, DocumentMetadata, UploadProgress } from '../../services/documentUpload'
 import { useNotifications } from '../../services/notifications'
 import { UserProfile } from '../../types/profiles'
-import { useKV } from '@github/spark/hooks'
+import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { useTelemetry } from '../../services/telemetry'
 
 interface SecureDocumentUploadProps {
@@ -72,7 +72,7 @@ export function SecureDocumentUpload({
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress>({ loaded: 0, total: 0, percentage: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [uploadedDocuments, setUploadedDocuments] = useKV<DocumentMetadata[]>(`documents-${userProfile.id}`, [])
+  const [uploadedDocuments, setUploadedDocuments] = useLocalStorage<DocumentMetadata[]>(`documents-${userProfile.id}`, [])
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { trackUserAction } = useTelemetry()

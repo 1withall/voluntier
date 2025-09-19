@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Switch } from './ui/switch'
 import { Separator } from './ui/separator'
 import { Alert, AlertDescription } from './ui/alert'
-import { Plus, Building, Calendar, Users, Download, FileText, CheckCircle, AlertTriangle, Shield } from '@phosphor-icons/react'
+import { Plus, Building, Calendar, Users, Download, FileText, CheckCircle, Warning, Shield } from '@phosphor-icons/react'
 import { useTelemetry } from '../services/telemetry'
 import { usePrivilege } from './auth/PrivilegeGuard'
 import { ProjectManagementPDFGenerator, EventProjectData } from '../services/pdfGenerator'
@@ -542,7 +542,7 @@ export function OrganizationDashboard({ events, onAddEvent, onUpdateEvent, userP
       {/* Access Control Alert */}
       {!isVerifiedOrganization && (
         <Alert variant="destructive">
-          <AlertTriangle size={16} />
+          <Warning size={16} />
           <AlertDescription>
             Organization verification required. Only verified organizations can create and manage events.
           </AlertDescription>
@@ -1071,7 +1071,7 @@ export function OrganizationDashboard({ events, onAddEvent, onUpdateEvent, userP
 
                   {Object.keys(formErrors).length > 0 && (
                     <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
+                      <Warning className="h-4 w-4" />
                       <AlertDescription>
                         Please review and fix the validation errors before submitting the form.
                       </AlertDescription>
@@ -1202,7 +1202,7 @@ export function OrganizationDashboard({ events, onAddEvent, onUpdateEvent, userP
 
           {events.length === 0 && (
             <Alert className="mt-4">
-              <AlertTriangle className="h-4 w-4" />
+              <Warning className="h-4 w-4" />
               <AlertDescription>
                 Create your first event to unlock project management templates
               </AlertDescription>
@@ -1304,7 +1304,7 @@ export function OrganizationDashboard({ events, onAddEvent, onUpdateEvent, userP
                       className="text-xs h-8"
                       disabled={!isVerifiedOrganization}
                     >
-                      <AlertTriangle size={12} className="mr-1" />
+                      <Warning size={12} className="mr-1" />
                       Risk Plan
                     </Button>
                     <Button
