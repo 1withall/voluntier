@@ -11,6 +11,8 @@ import { SignupFlow } from './components/SignupFlow'
 import { QRVerificationSystem } from './components/QRVerificationSystem'
 import { TelemetryDashboard } from './components/TelemetryDashboard'
 import { UnifiedProfileView } from './components/profiles/UnifiedProfileView'
+import { DocumentVerification } from './components/verification/DocumentVerification'
+import { OnboardingProgressTracker } from './components/onboarding/OnboardingProgressTracker'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
 import { Badge } from './components/ui/badge'
@@ -34,7 +36,7 @@ export interface VolunteerEvent {
 
 function App() {
   const [userProfile, setUserProfile] = useKV<UserProfile | null>('user-profile', null)
-  const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry'>('events')
+  const [currentView, setCurrentView] = useState<'events' | 'profile' | 'organization' | 'impact' | 'security' | 'verification' | 'telemetry' | 'document-verification' | 'onboarding'>('events')
   const [events, setEvents] = useKV<VolunteerEvent[]>('volunteer-events', [])
   const [registrations, setRegistrations] = useKV<{[eventId: string]: boolean}>('user-registrations', {})
   
@@ -182,6 +184,12 @@ function App() {
 
       case 'telemetry':
         return <TelemetryDashboard />
+
+      case 'document-verification':
+        return <DocumentVerification userProfile={userProfile} />
+
+      case 'onboarding':
+        return <OnboardingProgressTracker userProfile={userProfile} />
 
       default:
         return null
