@@ -172,8 +172,53 @@ The application teaches users that they can depend on each other through direct,
 - UV for dependency management
 - PostgreSQL 17+ with PostGIS extension
 - Redis (for caching and sessions)
+- Temporal server (for workflow orchestration)
 
 ### Installation
+
+#### Option 1: Docker Deployment (Recommended)
+
+**Quick Start:**
+```bash
+# Clone repository
+git clone https://github.com/1withall/voluntier.git
+cd voluntier
+
+# Start all services with auto-generated secrets
+./scripts/docker-start.sh
+
+# Services available at:
+# - API: http://localhost:8000
+# - API Docs: http://localhost:8000/docs  
+# - Temporal UI: http://localhost:8233
+```
+
+**Manual Docker Setup:**
+```bash
+# Copy environment template
+cp .env.docker .env
+
+# Generate secrets (paste output into .env)
+python3 -c "import secrets; print(secrets.token_hex(32))"
+
+# Edit .env with generated secrets
+vim .env
+
+# Start all services (PostgreSQL, Redis, Temporal, API, Worker)
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+📖 **See [DOCKER.md](DOCKER.md) for comprehensive deployment guide:**
+- Production deployment with SSL/TLS and nginx
+- Scaling and load balancing
+- Backup and restore procedures  
+- Monitoring and troubleshooting
+- Security best practices
+
+#### Option 2: Local Development
 
 ```bash
 # Clone the repository

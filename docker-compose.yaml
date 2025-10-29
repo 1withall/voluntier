@@ -1,0 +1,275 @@
+# Docker Compose v2 configuration for Voluntier
+# Production-grade multi-container setup with all required services
+
+services:
+  # PostgreSQL 17 with PostGIS for geospatial queries
+  postgres:
+    image: postgis/postgis:17-3.5
+    container_name: voluntier-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: voluntier
+      POSTGRES_USER: voluntier_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voluntier_user -d voluntier"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - voluntier-network
+
+  # Redis 7 for caching and sessions
+  redis:
+    image: redis:7.4-alpine
+    container_name: voluntier-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-change_me_in_production}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - voluntier-network
+
+  # Temporal server for workflow orchestration
+  temporal:
+    image: temporalio/auto-setup:1.27.0
+    container_name: voluntier-temporal
+    restart: unless-stopped
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=${TEMPORAL_DB_PASSWORD:-temporal_password}
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=false
+      - ES_SEEDS=
+      - ES_VERSION=v7
+    command:
+      - bash
+      - -c
+      - |
+        # Start temporal server in background
+        /etc/temporal/entrypoint.sh &
+        
+        # Wait for temporal to be ready
+        sleep 10
+        
+        # Register custom search attributes
+        tctl --address localhost:7233 admin cluster add-search-attributes \
+          --name user_id --type Int \
+          --name verification_status --type Keyword \
+          --name target_score --type Double \
+          --name created_at --type Datetime \
+          --name verification_methods_count --type Int
+        
+        # Keep container running
+        wait
+    ports:
+      - "7233:7233"  # gRPC API
+      - "8233:8233"  # Web UI
+    volumes:
+      - temporal_data:/etc/temporal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "temporal:7233", "cluster", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - voluntier-network
+
+  # FastAPI application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        PYTHON_VERSION: "3.13"
+    container_name: voluntier-api
+    restart: unless-stopped
+    environment:
+      # Application
+      APP_NAME: Voluntier
+      DEBUG: ${DEBUG:-False}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      
+      # Database
+      DATABASE_URL: postgresql+asyncpg://voluntier_user:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/voluntier
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
+      DATABASE_MAX_OVERFLOW: ${DATABASE_MAX_OVERFLOW:-20}
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-change_me_in_production}@redis:6379/0
+      
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8081}
+      
+      # Rate Limiting
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
+      
+      # Temporal
+      TEMPORAL_HOST: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: voluntier-task-queue
+      TEMPORAL_VERIFICATION_QUEUE: verification-queue
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./alembic:/app/alembic:ro
+      - ./app:/app/app:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - voluntier-network
+
+  # Temporal worker for verification workflows
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        PYTHON_VERSION: "3.13"
+    container_name: voluntier-worker
+    restart: unless-stopped
+    command: ["uv", "run", "python", "-m", "app.worker"]
+    environment:
+      # Application
+      APP_NAME: Voluntier
+      DEBUG: ${DEBUG:-False}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      
+      # Database
+      DATABASE_URL: postgresql+asyncpg://voluntier_user:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/voluntier
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
+      DATABASE_MAX_OVERFLOW: ${DATABASE_MAX_OVERFLOW:-20}
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ALGORITHM: HS256
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-change_me_in_production}@redis:6379/0
+      
+      # Temporal
+      TEMPORAL_HOST: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: voluntier-task-queue
+      TEMPORAL_VERIFICATION_QUEUE: verification-queue
+    volumes:
+      - ./app:/app/app:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    networks:
+      - voluntier-network
+
+  # Alembic migrations (run once on startup)
+  migrations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        PYTHON_VERSION: "3.13"
+    container_name: voluntier-migrations
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://voluntier_user:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/voluntier
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+    volumes:
+      - ./alembic:/app/alembic:ro
+      - ./alembic.ini:/app/alembic.ini:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - voluntier-network
+    restart: "no"  # Run once only
+
+  # Nginx reverse proxy (optional - for production)
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: voluntier-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - voluntier-network
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+    name: voluntier-postgres-data
+  redis_data:
+    driver: local
+    name: voluntier-redis-data
+  temporal_data:
+    driver: local
+    name: voluntier-temporal-data
+  nginx_logs:
+    driver: local
+    name: voluntier-nginx-logs
+
+networks:
+  voluntier-network:
+    driver: bridge
+    name: voluntier-network
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

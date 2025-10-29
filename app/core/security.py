@@ -5,13 +5,18 @@ This module provides:
 - JWT token generation and validation
 - OAuth2 password bearer scheme
 - Token refresh logic
+- Current user dependency for protected endpoints
 """
 
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Annotated, Any
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 
@@ -158,3 +163,77 @@ def verify_token_type(payload: dict[str, Any], expected_type: str) -> bool:
         False
     """
     return payload.get("type") == expected_type
+
+
+# OAuth2 scheme for token extraction
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(),
+) -> Any:  # Returns User model
+    """FastAPI dependency to get the current authenticated user.
+
+    Extracts and validates JWT token from Authorization header,
+    then retrieves the corresponding user from the database.
+
+    Args:
+        token: JWT token from Authorization header.
+        db: Database session (injected).
+
+    Returns:
+        User model instance of authenticated user.
+
+    Raises:
+        HTTPException 401: Invalid token, expired token, or user not found.
+
+    Example:
+        >>> from fastapi import APIRouter, Depends
+        >>> from app.models import User
+        >>>
+        >>> router = APIRouter()
+        >>>
+        >>> @router.get("/me")
+        >>> async def get_me(user: User = Depends(get_current_user)):
+        ...     return {"email": user.email}
+    """
+    from app.database import get_db  # Import here to avoid circular dependency
+    from app.models import User  # Import here to avoid circular dependency
+
+    # Get database session
+    if db is None:
+        async for session in get_db():
+            db = session
+            break
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        # Decode token
+        payload = decode_token(token)
+
+        # Verify it's an access token
+        if not verify_token_type(payload, "access"):
+            raise credentials_exception
+
+        # Extract email
+        email: str | None = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+
+    except JWTError:
+        raise credentials_exception
+
+    # Get user from database
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+
+    if user is None or not user.is_active:
+        raise credentials_exception
+
+    return user

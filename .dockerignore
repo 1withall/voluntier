@@ -1,0 +1,11 @@
+# Docker-specific ignores
+.env.docker
+nginx/ssl/*.key
+nginx/ssl/*.pem
+nginx/ssl/*.crt
+
+# Docker volumes
+postgres_data/
+redis_data/
+temporal_data/
+nginx_logs/

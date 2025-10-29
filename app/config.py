@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # Rate Limiting
     rate_limit_per_minute: int = 10
 
+    # Temporal
+    temporal_host: str = "localhost:7233"
+    temporal_namespace: str = "default"
+    temporal_task_queue: str = "voluntier-task-queue"
+    temporal_verification_queue: str = "verification-queue"
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )

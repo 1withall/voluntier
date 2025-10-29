@@ -15,8 +15,10 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.20",
+    "pyyaml>=6.0.3",
     "slowapi>=0.1.9",
     "sqlalchemy[asyncio]>=2.0.44",
+    "temporalio>=1.18.2",
     "uvicorn>=0.38.0",
 ]
 
