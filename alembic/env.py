@@ -36,7 +36,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
-    
+
     Generates SQL scripts without connecting to the database.
     Useful for generating migration SQL for manual review or
     execution in restricted environments.
@@ -57,7 +57,7 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     """Run migrations with the given connection.
-    
+
     Args:
         connection: SQLAlchemy connection to use for migrations.
     """
@@ -74,7 +74,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     """Run migrations in 'online' mode with async engine.
-    
+
     Creates an async engine and runs migrations within an
     async context. This is the standard mode for development.
     """

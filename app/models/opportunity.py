@@ -25,46 +25,46 @@ if TYPE_CHECKING:
 
 class Opportunity(Base):
     """Volunteer opportunity with geospatial location.
-    
+
     Attributes:
         id: Primary key.
         title: Opportunity title/summary.
         description: Detailed description of the opportunity.
         creator_id: Foreign key to User who created this opportunity.
-        
+
         # Location (PostGIS - Phase 1 Priority)
         location: PostGIS Point for geospatial matching with ST_DWithin.
         location_name: Human-readable address.
         max_distance_km: Maximum distance volunteers can be from location.
-        
+
         # Time & Duration
         start_time: When the opportunity starts (UTC).
         end_time: When the opportunity ends (UTC).
         duration_hours: Expected time commitment in hours.
-        
+
         # Requirements
         skills_required: JSON array of required skills.
         min_reputation: Minimum reputation score required (0-100).
         volunteers_needed: Number of volunteers needed.
         volunteers_confirmed: Number of confirmed matches.
-        
+
         # Status
         status: Opportunity state (open/filled/cancelled/completed).
         is_remote: Whether opportunity can be done remotely.
-        
+
         # Timestamps
         created_at: Creation timestamp (UTC).
         updated_at: Last modification timestamp (UTC).
-        
+
     Relationships:
         creator: User who posted this opportunity.
         matches: Matching results for this opportunity.
-        
+
     Indexes:
         - ix_opportunities_location: GiST index for ST_DWithin queries (Phase 1 critical).
         - ix_opportunities_start_time: Fast sorting by start time.
         - ix_opportunities_status: Filter by status.
-        
+
     Example:
         >>> opportunity = Opportunity(
         ...     title="Food Bank Volunteer",
@@ -80,23 +80,23 @@ class Opportunity(Base):
         >>> db.add(opportunity)
         >>> await db.commit()
     """
-    
+
     __tablename__ = "opportunities"
-    
+
     # Primary Key
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    
+
     # Basic Info
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    
+
     # Creator (User who posted this)
     creator_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    
+
     # Location (PostGIS Point - WGS84 coordinates)
     location: Mapped[str] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326),
@@ -108,7 +108,7 @@ class Opportunity(Base):
         default=50.0,  # Default 50km radius
         nullable=False,
     )
-    
+
     # Time & Duration
     start_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -119,7 +119,7 @@ class Opportunity(Base):
         nullable=True,
     )
     duration_hours: Mapped[float] = mapped_column(Float, nullable=False)
-    
+
     # Requirements
     skills_required: Mapped[str | None] = mapped_column(
         Text,  # JSON array as text for Phase 1
@@ -131,8 +131,10 @@ class Opportunity(Base):
         nullable=False,
     )
     volunteers_needed: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    volunteers_confirmed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    
+    volunteers_confirmed: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+
     # Status
     status: Mapped[str] = mapped_column(
         String(50),
@@ -140,7 +142,7 @@ class Opportunity(Base):
         nullable=False,
     )
     is_remote: Mapped[bool] = mapped_column(default=False, nullable=False)
-    
+
     # Timestamps (UTC)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -153,7 +155,7 @@ class Opportunity(Base):
         onupdate=func.now(),
         nullable=False,
     )
-    
+
     # Relationships
     creator: Mapped["User"] = relationship(
         back_populates="opportunities_created",
@@ -162,7 +164,7 @@ class Opportunity(Base):
         back_populates="opportunity",
         cascade="all, delete-orphan",
     )
-    
+
     # Indexes (Phase 1 Priority - PRD §3.1.3 Geospatial Matching)
     __table_args__ = (
         Index("ix_opportunities_location", "location", postgresql_using="gist"),
@@ -170,6 +172,6 @@ class Opportunity(Base):
         Index("ix_opportunities_status", "status"),
         Index("ix_opportunities_creator_id", "creator_id"),
     )
-    
+
     def __repr__(self) -> str:
         return f"<Opportunity(id={self.id}, title={self.title}, status={self.status})>"

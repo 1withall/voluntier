@@ -27,10 +27,11 @@ from app.config import settings
 # Declarative Base for all ORM models
 class Base(DeclarativeBase):
     """Base class for all database models.
-    
+
     All models should inherit from this class to be tracked
     by SQLAlchemy's metadata system and support Alembic migrations.
     """
+
     pass
 
 
@@ -41,13 +42,13 @@ _async_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 def get_engine() -> AsyncEngine:
     """Get or create the async database engine.
-    
+
     Returns:
         AsyncEngine: The singleton database engine instance.
-        
+
     Raises:
         RuntimeError: If engine hasn't been initialized yet.
-        
+
     Example:
         >>> engine = get_engine()
         >>> async with engine.begin() as conn:
@@ -63,13 +64,13 @@ def get_engine() -> AsyncEngine:
 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
     """Get the async session factory.
-    
+
     Returns:
         async_sessionmaker: Factory for creating AsyncSession instances.
-        
+
     Raises:
         RuntimeError: If session factory hasn't been initialized.
-        
+
     Example:
         >>> SessionLocal = get_session_factory()
         >>> async with SessionLocal() as session:
@@ -85,12 +86,12 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 async def init_db() -> None:
     """Initialize database connection and session factory.
-    
+
     This should be called once at application startup. Creates:
     - Async engine with asyncpg driver
     - Session factory with expire_on_commit=False
     - PostGIS extension enablement (if needed)
-    
+
     Example:
         >>> # In main.py startup event
         >>> @app.on_event("startup")
@@ -98,7 +99,7 @@ async def init_db() -> None:
         ...     await init_db()
     """
     global _engine, _async_session_factory
-    
+
     # Create async engine with asyncpg driver
     _engine = create_async_engine(
         settings.database_url,
@@ -108,7 +109,7 @@ async def init_db() -> None:
         pool_pre_ping=True,  # Verify connections before using them
         pool_recycle=3600,  # Recycle connections after 1 hour
     )
-    
+
     # Create session factory with optimized settings
     _async_session_factory = async_sessionmaker(
         _engine,
@@ -116,7 +117,7 @@ async def init_db() -> None:
         expire_on_commit=False,  # Don't expire objects after commit
         autoflush=False,  # Explicit flush control for better performance
     )
-    
+
     # Enable PostGIS extension if not already enabled
     # This is idempotent and safe to run multiple times
     async with _engine.begin() as conn:
@@ -125,10 +126,10 @@ async def init_db() -> None:
 
 async def close_db() -> None:
     """Close database connections and cleanup resources.
-    
+
     This should be called once at application shutdown.
     Properly disposes of the engine and all connection pools.
-    
+
     Example:
         >>> # In main.py shutdown event
         >>> @app.on_event("shutdown")
@@ -136,33 +137,33 @@ async def close_db() -> None:
         ...     await close_db()
     """
     global _engine, _async_session_factory
-    
+
     if _engine is not None:
         await _engine.dispose()
         _engine = None
-    
+
     _async_session_factory = None
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for database sessions.
-    
+
     Provides a transactional AsyncSession that automatically:
     - Opens a new session from the factory
     - Yields it to the route handler
     - Commits on success
     - Rolls back on exception
     - Closes the session when done
-    
+
     Yields:
         AsyncSession: Database session for the request.
-        
+
     Example:
         >>> from fastapi import APIRouter, Depends
         >>> from sqlalchemy.ext.asyncio import AsyncSession
-        >>> 
+        >>>
         >>> router = APIRouter()
-        >>> 
+        >>>
         >>> @router.get("/users/{user_id}")
         >>> async def get_user(
         ...     user_id: int,
@@ -174,7 +175,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         ...     return result.scalar_one_or_none()
     """
     session_factory = get_session_factory()
-    
+
     async with session_factory() as session:
         try:
             yield session

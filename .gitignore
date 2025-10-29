@@ -78,3 +78,6 @@ site/
 *.tmp
 *.bak
 *.orig
+
+# Extensions
+.serena/

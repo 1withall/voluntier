@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2025-10-29 18:30 UTC - Added
+- Implemented OAuth2 + JWT authentication system (Task 3):
+  - `app/core/security.py`: Password hashing with bcrypt, JWT token generation/validation
+  - `app/schemas/auth.py`: Pydantic models for registration, login, token refresh
+  - `app/api/v1/auth.py`: Three authentication endpoints with comprehensive error handling
+    - POST /api/v1/auth/register: User registration with email uniqueness validation
+    - POST /api/v1/auth/login: OAuth2 password flow authentication
+    - POST /api/v1/auth/refresh: Token refresh with validation
+  - Rate limiting: 10 requests/minute per endpoint using SlowAPI
+  - Access tokens: 30min expiry, Refresh tokens: 7 days expiry
+- Added test infrastructure in tests/conftest.py:
+  - Database fixtures with transaction rollback
+  - Test client with dependency overrides
+  - Authentication fixtures (test_user, verified_test_user, auth_headers)
+- Installed dependencies: slowapi (rate limiting), email-validator (Pydantic EmailStr)
+- Formatted codebase with black (11 files reformatted)
+
 ### 2025-10-29 17:00 UTC - Changed
 - Updated README.md with complete tech stack information:
   - Backend: FastAPI (Python 3.13+) with async/await

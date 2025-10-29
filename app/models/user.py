@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 class User(Base):
     """User account with authentication and profile data.
-    
+
     Attributes:
         id: Primary key.
         email: Unique email address for login.
@@ -35,42 +35,42 @@ class User(Base):
         is_active: Account enabled/disabled flag.
         is_verified: Email verification status.
         is_superuser: Admin privileges flag.
-        
+
         # Identity Verification (Phase 1 Priority)
         verification_status: Multi-factor verification state (pending/partial/verified).
         verification_methods: JSON array of completed verification methods.
         document_verified: Document upload verification complete.
         community_verified: Community validation complete.
         in_person_verified: In-person verification complete.
-        
+
         # Profile
         bio: User biography/description.
         skills: Array of skills (e.g., ["teaching", "construction", "translation"]).
         location: PostGIS Point for geospatial matching.
         location_name: Human-readable location (e.g., "San Francisco, CA").
         availability: Serialized availability schedule (JSON).
-        
+
         # Reputation (Phase 1 Priority)
         reputation_score: Calculated reputation (0-100 scale).
         total_reviews: Number of reviews received.
         total_hours_volunteered: Cumulative volunteer hours.
-        
+
         # Timestamps
         created_at: Account creation timestamp (UTC).
         updated_at: Last modification timestamp (UTC).
         last_active_at: Last login or activity timestamp.
-        
+
     Relationships:
         opportunities_created: Opportunities posted by this user.
         matches_as_volunteer: Matches where user is the volunteer.
         reviews_received: Reviews about this user.
         reviews_given: Reviews written by this user.
-        
+
     Indexes:
         - ix_users_email: Fast lookup by email for authentication.
         - ix_users_location: GiST index for geospatial queries.
         - ix_users_reputation_score: Fast sorting by reputation.
-        
+
     Example:
         >>> user = User(
         ...     email="volunteer@example.com",
@@ -82,51 +82,65 @@ class User(Base):
         >>> db.add(user)
         >>> await db.commit()
     """
-    
+
     __tablename__ = "users"
-    
+
     # Primary Key
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    
+
     # Authentication
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    
+
     # Basic Profile
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+
     # Status Flags
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    
+
     # Identity Verification (Phase 1 Priority - PRD §3.1.1)
     verification_status: Mapped[str] = mapped_column(
-        String(50), 
+        String(50),
         default="pending",  # pending, partial, verified, rejected
         nullable=False,
     )
-    document_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    community_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    in_person_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    
+    document_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    community_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    in_person_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
     # Location (PostGIS Point - WGS84 coordinates)
     location: Mapped[str | None] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326),
         nullable=True,
     )
     location_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    
+
     # Skills & Availability (stored as JSON in production, simplified for Phase 1)
-    skills: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array as text
-    availability: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON object as text
-    
+    skills: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON array as text
+    availability: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON object as text
+
     # Reputation (Phase 1 Priority - PRD §3.1.2)
     reputation_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     total_reviews: Mapped[int] = mapped_column(default=0, nullable=False)
-    total_hours_volunteered: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    
+    total_hours_volunteered: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+
     # Timestamps (UTC)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -143,7 +157,7 @@ class User(Base):
         DateTime(timezone=True),
         nullable=True,
     )
-    
+
     # Relationships (use TYPE_CHECKING to avoid circular imports)
     opportunities_created: Mapped[list["Opportunity"]] = relationship(
         back_populates="creator",
@@ -161,13 +175,13 @@ class User(Base):
         foreign_keys="Review.reviewer_id",
         back_populates="reviewer",
     )
-    
+
     # Indexes
     __table_args__ = (
         Index("ix_users_reputation_score", "reputation_score"),
         Index("ix_users_location", "location", postgresql_using="gist"),
         Index("ix_users_verification_status", "verification_status"),
     )
-    
+
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email}, reputation={self.reputation_score})>"
