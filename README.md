@@ -1,10 +1,10 @@
-# Voluntier
+# VolunTier
 
 A cross-platform mobile application connecting local communities through volunteer opportunities and mutual support.
 
 ## Vision
 
-Voluntier leverages the ubiquity of smartphones to rebuild trust and connection in local communities. By creating meaningful opportunities for people to help each other, we're building networks of mutual support that strengthen civic engagement and demonstrate the power of collaborative action.
+VolunTier leverages the ubiquity of smartphones to rebuild trust and connection in local communities. By creating meaningful opportunities for people to help each other, we're building networks of mutual support that strengthen civic engagement and demonstrate the power of collaborative action.
 
 ## Core Mission
 
@@ -14,7 +14,7 @@ Build a secure, accessible platform that makes volunteering easy, safe, and rewa
 
 The platform serves three distinct user types, each with tailored experiences:
 
-### 1. Individual Volunteers
+### 1. Individuals
 
 Community members seeking to:
 
@@ -22,6 +22,7 @@ Community members seeking to:
 - Build connections with neighbors
 - Develop new skills and experiences
 - Make tangible impact in their community
+- Access safe, vetted opportunities for assistance from trusted community members
 
 ### 2. Community Organizations
 
@@ -36,7 +37,7 @@ Non-profits, community groups, and grassroots organizations that:
 
 Community-minded businesses that:
 
-- Sponsor volunteer activities
+- Sponsor volunteer activities and events
 - Offer rewards and incentives
 - Demonstrate social responsibility
 - Connect with engaged community members
@@ -56,7 +57,7 @@ Community-minded businesses that:
 
 - Community-based reputation building
 - Transparent volunteer history
-- Review and rating systems informed by restorative justice principles
+- Review and rating systems
 - Privacy-first data handling
 - Focus on collective rather than individual competition
 
@@ -116,7 +117,7 @@ The application teaches users that they can depend on each other through direct,
 
 ## Value Propositions
 
-### For Volunteers
+### For Individuals
 
 - **Skill Development**: Gain experience in leadership, communication, and project management
 - **Professional Growth**: Resume-building opportunities and networking
@@ -124,6 +125,7 @@ The application teaches users that they can depend on each other through direct,
 - **Recognition**: Community-level badges and achievements (non-competitive)
 - **Tangible Rewards**: Discounts at local businesses, event access
 - **Social Connection**: Build genuine relationships with neighbors
+- **Safe Assistance**: Access vetted help from trusted community members with transparency and accountability built-in to the process
 
 ### For Organizations
 
@@ -148,10 +150,10 @@ The application teaches users that they can depend on each other through direct,
 
 ### Stack
 
-- **Backend**: TBD
-- **Database**: TBD (PostgreSQL recommended for ACID compliance)
-- **Mobile**: TBD (React Native or Flutter for cross-platform)
-- **Infrastructure**: TBD (Cloud-based for scalability)
+- **Backend**: FastAPI (Python 3.13+) with async/await
+- **Database**: PostgreSQL 17+ with PostGIS extension for geospatial queries
+- **Mobile**: React Native 0.77+ (planned for Phase 2)
+- **Infrastructure**: Docker containers, Redis for caching and sessions
 
 ### Key Technical Requirements
 
@@ -167,30 +169,48 @@ The application teaches users that they can depend on each other through direct,
 ### Prerequisites
 
 - Python 3.13+
-- uv for dependency management
+- UV for dependency management
+- PostgreSQL 17+ with PostGIS extension
+- Redis (for caching and sessions)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/1withall/voluntier.git
 cd voluntier
 
-# Install dependencies
-pip install -e .
+# Install dependencies using UV
+uv sync
 
-# Run the application
-python main.py
+# Copy environment template and configure
+cp .env.example .env
+# Edit .env with your database credentials and secret key
+
+# Run database migrations
+uv run alembic upgrade head
+
+# Run the development server
+uv run fastapi dev main.py
 ```
 
 ### Development Setup
 
 ```bash
-# Install development dependencies
-pip install -e ".[dev]"
+# Install all dependencies including dev tools
+uv sync --all-extras
 
 # Run tests
-pytest
+uv run pytest
+
+# Format code
+uv run black .
+
+# Lint code
+uv run ruff check --fix .
+
+# Type check
+uv run mypy app/
 ```
 
 ## Contributing
@@ -207,8 +227,8 @@ We welcome contributions from developers who share our vision of stronger, more 
 
 ## License
 
-TBD
+GPL-3.0 License. See LICENSE for details.
 
 ## Contact
 
-TBD
+Project Repository: https://github.com/1withall/voluntier

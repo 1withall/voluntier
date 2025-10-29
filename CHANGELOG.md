@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2025-10-29 17:00 UTC - Changed
+- Updated README.md with complete tech stack information:
+  - Backend: FastAPI (Python 3.13+) with async/await
+  - Database: PostgreSQL 17+ with PostGIS extension
+  - Mobile: React Native 0.77+ (planned for Phase 2)
+  - Infrastructure: Docker containers, Redis for caching
+- Updated installation instructions to use UV instead of pip
+- Added comprehensive development setup commands (format, lint, type check)
+- Updated contact information with GitHub repository URL
+- Enhanced .gitignore with comprehensive Python, IDE, and project-specific exclusions
+
 ### 2025-01-23 16:45 UTC - Added
 - Implemented database models with PostGIS support:
   - User model with verification fields (document/community/in-person), reputation scoring, PostGIS Point location
